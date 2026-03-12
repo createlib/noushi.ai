@@ -7,6 +7,9 @@ export interface DriveTokenResult {
     expires_in: number;
 }
 
+let cachedToken: string | null = null;
+let tokenExpiryTime: number = 0;
+
 // 1. Load GSI script dynamically
 export function loadGisScript(): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -27,6 +30,12 @@ export function loadGisScript(): Promise<void> {
 // 2. Init and request token
 export function authenticateWithDrive(clientId: string): Promise<string> {
     return new Promise((resolve, reject) => {
+        // Return cached token if still valid (adding a small buffer for safety)
+        if (cachedToken && Date.now() < tokenExpiryTime - 60000) {
+            resolve(cachedToken);
+            return;
+        }
+
         try {
             const tokenClient = window.google.accounts.oauth2.initTokenClient({
                 client_id: clientId,
@@ -35,7 +44,11 @@ export function authenticateWithDrive(clientId: string): Promise<string> {
                     if (tokenResponse.error !== undefined) {
                         reject(new Error(tokenResponse.error));
                     } else {
-                        resolve(tokenResponse.access_token);
+                        // Cache the newly acquired token
+                        cachedToken = tokenResponse.access_token;
+                        // expiresIn is usually 3599 seconds
+                        tokenExpiryTime = Date.now() + (tokenResponse.expires_in * 1000);
+                        resolve(cachedToken);
                     }
                 },
             });
@@ -137,28 +150,29 @@ export async function performSync(token: string, fileId: string): Promise<void> 
     // B) Get Local Data
     const localData = await db.transactions.toArray();
 
-    // C) Merge (simple union by id)
+    // C) Merge (simple union by id, prioritizing remote if conflict, but preserving local-only)
     const remoteMap = new Map(remoteData.map(t => [t.id, t]));
     const localMap = new Map(localData.map(t => [t.id, t]));
 
-    // Insert/Update from remote to local
-    for (const [id, remoteTx] of remoteMap) {
-        if (!localMap.has(id!)) {
-            await db.transactions.put(remoteTx);
-            localMap.set(id, remoteTx);
-        } else {
-            // Very simple fallback: Keep local if conflict, or pick remote.
-            // Better to pick the one with later updatedAt, but since we only have `createdAt`, we'll assume they are immutable or remote overwrites.
-            // Let's assume remote takes precedence to keep it simple, or leave local intact if it already existed.
-            // (Leaving intact here for safety)
-        }
+    const mergedDataMap = new Map<string, Transaction>();
+
+    // Add all local
+    for (const [id, localTx] of localMap) {
+        if (id) mergedDataMap.set(id, localTx);
     }
 
-    // Now re-fetch full local data which includes merged results
-    const fullMergedData = await db.transactions.toArray();
+    // Add/Overwrite all remote
+    for (const [id, remoteTx] of remoteMap) {
+        if (id) mergedDataMap.set(id, remoteTx);
+    }
 
-    // D) Upload back to Drive
-    await uploadTransactions(token, fileId, fullMergedData);
+    const mergedArray = Array.from(mergedDataMap.values());
+
+    // Write back to local DB by BulkPut
+    await db.transactions.bulkPut(mergedArray);
+
+    // D) Upload full merged back to Drive
+    await uploadTransactions(token, fileId, mergedArray);
 }
 
 // Global declaration for Google API
