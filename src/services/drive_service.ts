@@ -32,7 +32,7 @@ export function authenticateWithDrive(clientId: string): Promise<string> {
     return new Promise((resolve, reject) => {
         // Return cached token if still valid (adding a small buffer for safety)
         if (cachedToken && Date.now() < tokenExpiryTime - 60000) {
-            resolve(cachedToken);
+            resolve(cachedToken as string);
             return;
         }
 
@@ -48,7 +48,7 @@ export function authenticateWithDrive(clientId: string): Promise<string> {
                         cachedToken = tokenResponse.access_token;
                         // expiresIn is usually 3599 seconds
                         tokenExpiryTime = Date.now() + (tokenResponse.expires_in * 1000);
-                        resolve(cachedToken);
+                        resolve(tokenResponse.access_token);
                     }
                 },
             });
