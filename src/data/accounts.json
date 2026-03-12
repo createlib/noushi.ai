@@ -1,0 +1,1286 @@
+[
+  {
+    "code": 100,
+    "name": "現金",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 101,
+    "name": "小口現金",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 110,
+    "name": "当座預金",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 111,
+    "name": "普通預金",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 112,
+    "name": "通知預金",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 113,
+    "name": "定期預金",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 114,
+    "name": "定期積金",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 115,
+    "name": "別段預金",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 116,
+    "name": "郵便貯金",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 117,
+    "name": "納税準備預金",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 118,
+    "name": "商品券",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 120,
+    "name": "受取手形",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 121,
+    "name": "不渡手形",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 130,
+    "name": "売掛金",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 140,
+    "name": "有価証券",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 150,
+    "name": "商品",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 151,
+    "name": "製品",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 152,
+    "name": "半製品",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 153,
+    "name": "仕掛品",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 154,
+    "name": "原材料",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 155,
+    "name": "貯蔵品",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 156,
+    "name": "副産物作業くず",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 160,
+    "name": "前払金",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 161,
+    "name": "前払費用",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 162,
+    "name": "未収収益",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 163,
+    "name": "短期貸付金",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 164,
+    "name": "未収入金",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 165,
+    "name": "預け金",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 166,
+    "name": "立替金",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 167,
+    "name": "仮払金",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 181,
+    "name": "仮払消費税等",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 200,
+    "name": "建物",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 201,
+    "name": "附属設備",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 202,
+    "name": "構築物",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 203,
+    "name": "機械装置",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 204,
+    "name": "車両運搬具",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 206,
+    "name": "工具器具備品",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 210,
+    "name": "土地",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 211,
+    "name": "建設仮勘定",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 212,
+    "name": "一括償却資産",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 250,
+    "name": "電話加入権",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 251,
+    "name": "施設利用権",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 252,
+    "name": "工業所有権",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 253,
+    "name": "借地権",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 255,
+    "name": "ソフトウェア",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 260,
+    "name": "投資有価証券",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 261,
+    "name": "出資金",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 262,
+    "name": "敷金",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 263,
+    "name": "長期貸付金",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 264,
+    "name": "破産更生債権",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 265,
+    "name": "長期前払費用",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 267,
+    "name": "長期固定性預金",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 268,
+    "name": "差入保証金",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 269,
+    "name": "預託金",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 280,
+    "name": "開業費",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 291,
+    "name": "事業主貸",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 292,
+    "name": "資産譲渡損",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 300,
+    "name": "支払手形",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 301,
+    "name": "買掛金",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 320,
+    "name": "短期借入金",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 321,
+    "name": "設備支払手形",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 322,
+    "name": "未払金",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 323,
+    "name": "未払費用",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 324,
+    "name": "前受金",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 325,
+    "name": "預り金",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 327,
+    "name": "前受収益",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 328,
+    "name": "仮受金",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 330,
+    "name": "預り保証金",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 331,
+    "name": "割引手形",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 332,
+    "name": "裏書手形",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 333,
+    "name": "貸倒引当金",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 338,
+    "name": "未払消費税等",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 361,
+    "name": "仮受消費税等",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 370,
+    "name": "長期借入金",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 371,
+    "name": "長期未払金",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 390,
+    "name": "事業主借",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 391,
+    "name": "受取利息",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 392,
+    "name": "受取配当",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 393,
+    "name": "資産売却益",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 400,
+    "name": "元入金",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 500,
+    "name": "売上（収入）",
+    "type": "credit",
+    "report": "PL"
+  },
+  {
+    "code": 501,
+    "name": "給与（収入）",
+    "type": "credit",
+    "report": "PL"
+  },
+  {
+    "code": 510,
+    "name": "売上値引高",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 520,
+    "name": "売上戻り高",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 530,
+    "name": "売上割戻し高",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 580,
+    "name": "事業分量配当金",
+    "type": "credit",
+    "report": "PL"
+  },
+  {
+    "code": 581,
+    "name": "仕入割引",
+    "type": "credit",
+    "report": "PL"
+  },
+  {
+    "code": 583,
+    "name": "家事消費等",
+    "type": "credit",
+    "report": "PL"
+  },
+  {
+    "code": 590,
+    "name": "雑収入",
+    "type": "credit",
+    "report": "PL"
+  },
+  {
+    "code": 600,
+    "name": "期首商品棚卸高",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 605,
+    "name": "期首製品棚卸高",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 610,
+    "name": "仕入高",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 620,
+    "name": "仕入値引高",
+    "type": "credit",
+    "report": "PL"
+  },
+  {
+    "code": 630,
+    "name": "仕入戻し高",
+    "type": "credit",
+    "report": "PL"
+  },
+  {
+    "code": 640,
+    "name": "仕入割戻し高",
+    "type": "credit",
+    "report": "PL"
+  },
+  {
+    "code": 650,
+    "name": "期末商品棚卸高",
+    "type": "credit",
+    "report": "PL"
+  },
+  {
+    "code": 690,
+    "name": "期末製品棚卸高",
+    "type": "credit",
+    "report": "PL"
+  },
+  {
+    "code": 700,
+    "name": "租税公課",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 701,
+    "name": "荷造運賃手数料",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 702,
+    "name": "運賃",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 703,
+    "name": "水道光熱費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 704,
+    "name": "旅費交通費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 705,
+    "name": "通信費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 706,
+    "name": "広告宣伝費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 707,
+    "name": "接待交際費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 708,
+    "name": "保険料",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 709,
+    "name": "修繕費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 710,
+    "name": "消耗品費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 711,
+    "name": "事務用品費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 712,
+    "name": "減価償却費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 713,
+    "name": "福利厚生費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 714,
+    "name": "法定福利費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 715,
+    "name": "給料手当",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 716,
+    "name": "賞与",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 717,
+    "name": "雑給",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 718,
+    "name": "退職金",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 719,
+    "name": "退職金掛金",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 720,
+    "name": "外注費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 721,
+    "name": "支払利息",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 722,
+    "name": "割引料",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 723,
+    "name": "地代家賃",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 724,
+    "name": "貸倒損失",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 725,
+    "name": "支払手数料",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 726,
+    "name": "車両費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 727,
+    "name": "燃料費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 728,
+    "name": "賃借料",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 729,
+    "name": "リース料",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 730,
+    "name": "採用教育費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 731,
+    "name": "会議費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 732,
+    "name": "新聞図書費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 733,
+    "name": "販売手数料",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 734,
+    "name": "販売促進費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 735,
+    "name": "諸会費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 736,
+    "name": "手形売却損",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 737,
+    "name": "貸倒引当金",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 740,
+    "name": "売上割引",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 741,
+    "name": "長期前払費用償却",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 742,
+    "name": "繰延資産償却",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 743,
+    "name": "慶弔費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 750,
+    "name": "雑損失",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 760,
+    "name": "雑費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 800,
+    "name": "貸倒引当金戻入",
+    "type": "credit",
+    "report": "PL"
+  },
+  {
+    "code": 810,
+    "name": "専従者給与",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 811,
+    "name": "貸倒引当金繰入",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 997,
+    "name": "未確定勘定",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 999,
+    "name": "諸口",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 1199,
+    "name": "現金預金合計",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 1399,
+    "name": "売上債権合計",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 1498,
+    "name": "有価証券合計",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 1499,
+    "name": "当座資産合計",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 1599,
+    "name": "棚卸資産合計",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 1998,
+    "name": "その他流動資産合計",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 1999,
+    "name": "流動資産合計",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 2199,
+    "name": "有形固定資産合計",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 2599,
+    "name": "無形固定資産合計",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 2699,
+    "name": "投資等合計",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 2799,
+    "name": "固定資産合計",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 2899,
+    "name": "繰延資産合計",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 2998,
+    "name": "事業主貸合計",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 2999,
+    "name": "資産の部合計",
+    "type": "debit",
+    "report": "BS"
+  },
+  {
+    "code": 3099,
+    "name": "仕入債務合計",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 3698,
+    "name": "その他流動負債合計",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 3699,
+    "name": "流動負債合計",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 3799,
+    "name": "固定負債合計",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 3998,
+    "name": "事業主借合計",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 3999,
+    "name": "負債の部合計",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 4900,
+    "name": "控除前所得",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 4989,
+    "name": "資本の部合計",
+    "type": "credit",
+    "report": "BS"
+  },
+  {
+    "code": 4999,
+    "name": "負債及び資本の部合計",
+    "type": "unknown",
+    "report": "unknown"
+  },
+  {
+    "code": 5100,
+    "name": "農業売上",
+    "type": "credit",
+    "report": "PL"
+  },
+  {
+    "code": 5101,
+    "name": "家事消費(農)",
+    "type": "credit",
+    "report": "PL"
+  },
+  {
+    "code": 5102,
+    "name": "雑収入(農)",
+    "type": "credit",
+    "report": "PL"
+  },
+  {
+    "code": 5200,
+    "name": "賃貸料",
+    "type": "credit",
+    "report": "PL"
+  },
+  {
+    "code": 5201,
+    "name": "礼金・更新料",
+    "type": "credit",
+    "report": "PL"
+  },
+  {
+    "code": 5202,
+    "name": "共益費",
+    "type": "credit",
+    "report": "PL"
+  },
+  {
+    "code": 5999,
+    "name": "収入金額合計",
+    "type": "credit",
+    "report": "PL"
+  },
+  {
+    "code": 6099,
+    "name": "期首商製品棚卸合計",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 6498,
+    "name": "当期商品仕入合計",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 6499,
+    "name": "当期製品製造原価",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 6599,
+    "name": "期末商製品棚卸合計",
+    "type": "credit",
+    "report": "PL"
+  },
+  {
+    "code": 6998,
+    "name": "売上原価合計",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 6999,
+    "name": "売上総利益",
+    "type": "credit",
+    "report": "PL"
+  },
+  {
+    "code": 7699,
+    "name": "経費合計",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 7999,
+    "name": "差引合計",
+    "type": "credit",
+    "report": "PL"
+  },
+  {
+    "code": 8000,
+    "name": "種苗費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 8001,
+    "name": "肥料費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 8002,
+    "name": "農薬費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 8003,
+    "name": "諸材料費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 8004,
+    "name": "農具費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 8005,
+    "name": "素畜費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 8006,
+    "name": "飼料費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 8007,
+    "name": "小作料・賃借料",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 8008,
+    "name": "雇人費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 8009,
+    "name": "利子割引料(農)",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 8010,
+    "name": "土地改良費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 8099,
+    "name": "繰戻額等合計",
+    "type": "credit",
+    "report": "PL"
+  },
+  {
+    "code": 8199,
+    "name": "繰入額等合計",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 8299,
+    "name": "控除前所得",
+    "type": "credit",
+    "report": "PL"
+  },
+  {
+    "code": 9000,
+    "name": "減価償却費(不)",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 9001,
+    "name": "借入金利子(不)",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 9002,
+    "name": "修繕費(不)",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 9003,
+    "name": "損害保険料(不)",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 9004,
+    "name": "管理費(不)",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 5300,
+    "name": "原材料仕入高",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 5310,
+    "name": "期首原材料棚卸高",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 5320,
+    "name": "期末原材料棚卸高",
+    "type": "credit",
+    "report": "PL"
+  },
+  {
+    "code": 5400,
+    "name": "労務費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 5500,
+    "name": "外注工賃",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 5510,
+    "name": "電力費",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 5520,
+    "name": "水道光熱費(製)",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 5530,
+    "name": "修繕費(製)",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 5590,
+    "name": "雑費(製)",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 5610,
+    "name": "期首仕掛品棚卸高",
+    "type": "debit",
+    "report": "PL"
+  },
+  {
+    "code": 5620,
+    "name": "期末仕掛品棚卸高",
+    "type": "credit",
+    "report": "PL"
+  }
+]

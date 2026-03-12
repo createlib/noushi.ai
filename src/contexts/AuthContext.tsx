@@ -1,0 +1,100 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import type { User } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../firebase';
+import { db as localDb } from '../db/db';
+
+interface AuthContextType {
+    user: User | null;
+    membershipRank: string | null;
+    loading: boolean;
+    hasAccess: boolean;
+}
+
+const AuthContext = createContext<AuthContextType>({
+    user: null,
+    membershipRank: null,
+    loading: true,
+    hasAccess: false
+});
+
+export const useAuth = () => useContext(AuthContext);
+
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+    const [user, setUser] = useState<User | null>(null);
+    const [membershipRank, setMembershipRank] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            setUser(currentUser);
+
+            if (currentUser) {
+                console.log("🔥 User authenticated with UID:", currentUser.uid);
+                try {
+                    // NOAH community profile data path
+                    const docPath = `artifacts/default-app-id/users/${currentUser.uid}/profile/data`;
+                    console.log("🔥 Fetching Firestore doc at path:", docPath);
+                    const docRef = doc(db, 'artifacts', 'default-app-id', 'users', currentUser.uid, 'profile', 'data');
+                    const docSnap = await getDoc(docRef);
+
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        console.log("🔥 Firestore doc exists! Raw data:", data);
+                        setMembershipRank(data.membershipRank || null);
+                        console.log("🔥 Extracted membershipRank:", data.membershipRank);
+
+                        // Sync API keys to local DB if available
+                        if (data.geminiApiKey || data.aiModel) {
+                            try {
+                                const localSettings = await localDb.settings.get(1);
+                                if (localSettings) {
+                                    await localDb.settings.update(1, {
+                                        geminiApiKey: data.geminiApiKey || localSettings.geminiApiKey,
+                                        aiModel: data.aiModel || localSettings.aiModel
+                                    });
+                                } else {
+                                    await localDb.settings.add({
+                                        id: 1,
+                                        geminiApiKey: data.geminiApiKey || '',
+                                        aiModel: data.aiModel || 'gemini-2.5-flash'
+                                    });
+                                }
+                                console.log("🔥 Synced API settings to IndexedDB.");
+                            } catch (syncErr) {
+                                console.error("Failed to sync settings to local DB", syncErr);
+                            }
+                        }
+
+                    } else {
+                        console.warn("⚠️ Firestore doc does NOT exist at this path:", docPath);
+                        setMembershipRank(null);
+                    }
+                } catch (error: any) {
+                    console.error("❌ Error fetching user rank:", error?.code, error?.message, error);
+                    setMembershipRank(null);
+                }
+            } else {
+                console.log("🔥 No user is signed in.");
+                setMembershipRank(null);
+            }
+
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    // Check if user has sufficient rank
+    // Allow GUARDIAN and COVENANT (case-insensitive)
+    const normalizedRank = membershipRank?.toUpperCase() || '';
+    const hasAccess = normalizedRank === 'GUARDIAN' || normalizedRank === 'COVENANT';
+
+    return (
+        <AuthContext.Provider value={{ user, membershipRank, loading, hasAccess }}>
+            {children}
+        </AuthContext.Provider>
+    );
+};
