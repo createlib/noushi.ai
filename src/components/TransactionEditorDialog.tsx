@@ -48,13 +48,14 @@ export default function TransactionEditorDialog({ open, onClose, transactionToEd
         try {
             if (transactionToEdit && transactionToEdit.id) {
                 await db.transactions.update(transactionToEdit.id, {
-                    date, debits, credits, description
+                    date, debits, credits, description, updatedAt: Date.now()
                 });
             } else {
                 await db.transactions.add({
                     id: crypto.randomUUID(),
                     date, debits, credits, description,
-                    createdAt: Date.now()
+                    createdAt: Date.now(),
+                    updatedAt: Date.now()
                 });
             }
             onClose();

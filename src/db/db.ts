@@ -19,7 +19,9 @@ export interface Transaction {
     credits: TransactionLine[]; // 貸方
     description: string;
     imageId?: string;   // 画像参照用 (Firebase/Local)
-    createdAt: number;  // ソート用タイムスタンプ
+    createdAt: number;  // 作成日時
+    updatedAt: number;  // 同期・最終更新日時
+    deletedAt?: number; // ソフトデリート用
 }
 
 export interface Settings {
@@ -39,9 +41,9 @@ export class AccountingDB extends Dexie {
 
     constructor() {
         super('AccountingDB');
-        this.version(3).stores({
+        this.version(4).stores({
             accounts: 'code, name, type, report',
-            transactions: 'id, date, createdAt',
+            transactions: 'id, date, createdAt, updatedAt, deletedAt',
             settings: '++id, geminiApiKey, aiModel'
         });
     }

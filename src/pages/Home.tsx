@@ -30,7 +30,7 @@ export default function Home() {
 
     if (!allTransactions || !accounts) return <Typography p={2}>Loading...</Typography>;
 
-    const yearTransactions = allTransactions.filter(t => t.date.startsWith(String(selectedYear)));
+    const yearTransactions = allTransactions.filter(t => t.date.startsWith(String(selectedYear)) && !t.deletedAt);
 
     let income = 0;
     let expense = 0;

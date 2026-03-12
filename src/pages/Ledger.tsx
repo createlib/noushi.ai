@@ -11,7 +11,7 @@ import { useFiscalYear } from '../contexts/FiscalYearContext';
 export default function Ledger() {
     const { selectedYear } = useFiscalYear();
     const allTransactions = useLiveQuery(() => db.transactions.orderBy('date').reverse().toArray());
-    const transactions = allTransactions?.filter(t => t.date.startsWith(String(selectedYear)));
+    const transactions = allTransactions?.filter(t => t.date.startsWith(String(selectedYear)) && !t.deletedAt);
     const accounts = useLiveQuery(() => db.accounts.toArray());
 
     const [editorOpen, setEditorOpen] = useState(false);
@@ -21,7 +21,11 @@ export default function Ledger() {
 
     const handleDelete = async (id?: string) => {
         if (id && window.confirm('本当に削除しますか？')) {
-            await db.transactions.delete(id);
+            await db.transactions.update(id, {
+                deletedAt: Date.now(),
+                updatedAt: Date.now()
+            });
+            // Auto sync check could go here if we want immediate deletion sync
         }
     };
 

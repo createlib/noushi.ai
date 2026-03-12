@@ -171,20 +171,37 @@ export async function performSync(token: string, fileId: string): Promise<void> 
     // B) Get Local Data
     const localData = await db.transactions.toArray();
 
-    // C) Merge (simple union by id, prioritizing remote if conflict, but preserving local-only)
+    // C) Merge (Last-Write-Wins based on updatedAt)
     const remoteMap = new Map(remoteData.map(t => [t.id, t]));
     const localMap = new Map(localData.map(t => [t.id, t]));
 
     const mergedDataMap = new Map<string, Transaction>();
 
-    // Add all local
-    for (const [id, localTx] of localMap) {
-        if (id) mergedDataMap.set(id, localTx);
-    }
+    // Process all unique IDs
+    const allIds = new Set([...remoteMap.keys(), ...localMap.keys()]);
 
-    // Add/Overwrite all remote
-    for (const [id, remoteTx] of remoteMap) {
-        if (id) mergedDataMap.set(id, remoteTx);
+    for (const id of allIds) {
+        if (!id) continue;
+        const localTx = localMap.get(id);
+        const remoteTx = remoteMap.get(id);
+
+        if (localTx && remoteTx) {
+            // Both exist: pick the one with the later updatedAt (or fallback to createdAt)
+            const localTime = localTx.updatedAt || localTx.createdAt || 0;
+            const remoteTime = remoteTx.updatedAt || remoteTx.createdAt || 0;
+
+            if (localTime >= remoteTime) {
+                mergedDataMap.set(id, localTx);
+            } else {
+                mergedDataMap.set(id, remoteTx);
+            }
+        } else if (localTx) {
+            // Only local exists (it's new or was not synced yet)
+            mergedDataMap.set(id, localTx);
+        } else if (remoteTx) {
+            // Only remote exists
+            mergedDataMap.set(id, remoteTx);
+        }
     }
 
     const mergedArray = Array.from(mergedDataMap.values());

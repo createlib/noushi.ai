@@ -142,6 +142,7 @@ export default function CameraInput() {
                 description: editingResult.description || '',
                 imageId: localImageId || undefined,
                 createdAt: Date.now(),
+                updatedAt: Date.now(),
             });
 
             // Auto sync

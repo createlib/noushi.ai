@@ -127,6 +127,7 @@ export default function CSVImport() {
                 credits: [...editingResult.credits],
                 description: editingResult.description || '',
                 createdAt: Date.now(),
+                updatedAt: Date.now(),
             });
             setSuccessMsg('仕訳を登録しました');
             handleRemove(reviewingId);
