@@ -21,13 +21,26 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { Login } from './pages/Login';
 
 
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from './db/db';
+
 function YearSelector() {
   const { selectedYear, setSelectedYear } = useFiscalYear();
   const currentYear = new Date().getFullYear();
 
-  let validYears = [];
-  for (let y = currentYear + 1; y >= 2000; y--) {
-    validYears.push(y);
+  const allTx = useLiveQuery(() => db.transactions.toArray());
+
+  let validYears: number[] = [currentYear];
+  if (allTx) {
+    const txYears = allTx
+      .map((t: any) => parseInt(t.date.substring(0, 4), 10))
+      .filter((y: any) => !isNaN(y) && y > 1900 && y < 2100);
+    validYears = Array.from(new Set([...validYears, ...txYears])).sort((a, b) => b - a);
+  }
+
+  if (validYears.length < 5) {
+    const minYears = [currentYear + 1, currentYear, currentYear - 1, currentYear - 2, currentYear - 3];
+    validYears = Array.from(new Set([...validYears, ...minYears])).sort((a, b) => b - a);
   }
 
   return (
