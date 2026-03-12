@@ -23,33 +23,67 @@ export default function Report() {
     const accountBalancesCurrent: Record<number, number> = {};
     const accountBalancesKimatsu: Record<number, number> = {};
 
+    accounts.forEach(a => {
+        accountBalancesKishu[a.code] = 0;
+        accountBalancesCurrent[a.code] = 0;
+        accountBalancesKimatsu[a.code] = 0;
+    });
+
+    const pastTransactionsByYear: Record<string, any[]> = {};
+
     allTransactions.forEach(t => {
         const tYear = t.date.substring(0, 4);
         const sYear = String(selectedYear);
 
         if (tYear < sYear) {
-            (t.debits || []).forEach(d => {
-                accountBalancesKishu[d.code] = (accountBalancesKishu[d.code] || 0) + d.amount;
-            });
-            (t.credits || []).forEach(c => {
-                accountBalancesKishu[c.code] = (accountBalancesKishu[c.code] || 0) - c.amount;
-            });
+            if (!pastTransactionsByYear[tYear]) pastTransactionsByYear[tYear] = [];
+            pastTransactionsByYear[tYear].push(t);
         } else if (tYear === sYear) {
-            (t.debits || []).forEach(d => {
-                accountBalancesCurrent[d.code] = (accountBalancesCurrent[d.code] || 0) + d.amount;
+            (t.debits || []).forEach((d: any) => {
+                accountBalancesCurrent[d.code] += d.amount;
             });
-            (t.credits || []).forEach(c => {
-                accountBalancesCurrent[c.code] = (accountBalancesCurrent[c.code] || 0) - c.amount;
+            (t.credits || []).forEach((c: any) => {
+                accountBalancesCurrent[c.code] -= c.amount;
             });
+        }
+    });
+
+    const pastYears = Object.keys(pastTransactionsByYear).sort();
+    pastYears.forEach(year => {
+        const txs = pastTransactionsByYear[year];
+        txs.forEach(t => {
+            (t.debits || []).forEach((d: any) => { accountBalancesKishu[d.code] += d.amount; });
+            (t.credits || []).forEach((c: any) => { accountBalancesKishu[c.code] -= c.amount; });
+        });
+
+        let deltaCapital = 0;
+
+        accounts.forEach(a => {
+            if (a.report === 'PL') {
+                deltaCapital += accountBalancesKishu[a.code];
+                accountBalancesKishu[a.code] = 0;
+            } else if (a.code === 210 || a.name.includes("事業主貸")) {
+                deltaCapital += accountBalancesKishu[a.code];
+                accountBalancesKishu[a.code] = 0;
+            } else if (a.code === 310 || a.name.includes("事業主借")) {
+                deltaCapital += accountBalancesKishu[a.code];
+                accountBalancesKishu[a.code] = 0;
+            }
+        });
+
+        let capitalCode = 300;
+        const capitalAcct = accounts.find(a => a.name.includes("元入金"));
+        if (capitalAcct) capitalCode = capitalAcct.code;
+        if (accounts.some(a => a.code === capitalCode)) {
+            accountBalancesKishu[capitalCode] += deltaCapital;
         }
     });
 
     accounts.forEach(a => {
         if (a.report === 'BS') {
-            accountBalancesKimatsu[a.code] = (accountBalancesKishu[a.code] || 0) + (accountBalancesCurrent[a.code] || 0);
+            accountBalancesKimatsu[a.code] = accountBalancesKishu[a.code] + accountBalancesCurrent[a.code];
         } else {
-            accountBalancesKimatsu[a.code] = (accountBalancesCurrent[a.code] || 0);
-            accountBalancesKishu[a.code] = 0;
+            accountBalancesKimatsu[a.code] = accountBalancesCurrent[a.code];
         }
     });
 
@@ -235,12 +269,15 @@ export default function Report() {
             if (relatedTransactions.length === 0) return; // 取引なしはスキップ
 
             // 勘定科目のヘッダー行
+            const accountKishuRaw = accountBalancesKishu[account.code] || 0;
+            const accountKishu = account.type === 'debit' ? accountKishuRaw : -accountKishuRaw;
+
             wsData.push([String(account.code), account.name, account.type === 'debit' ? '借方' : '貸方']);
             wsData.push(['日付', '仕訳No / 税区分', '科目コード', '相手科目', '金額 (借方)', '金額 (貸方)', '残高']);
             wsData.push(['', '', '', '摘要', '', '', '']);
-            wsData.push(['', '', '', '前年度繰越', '', '', '0']); // 一旦0とする
+            wsData.push(['', '', '', '前年度繰越', '', '', accountKishu]);
 
-            let currentBalance = 0;
+            let currentBalance = accountKishu;
 
             relatedTransactions.forEach((t, index) => {
                 const isDebit = (t.debits || []).find(d => d.code === account.code);
@@ -470,7 +507,7 @@ export default function Report() {
 
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mt={3}>
                     <PdfExporter data={pdfData} />
-                    <GlPdfExporter accounts={accounts} transactions={transactions} selectedYear={selectedYear} />
+                    <GlPdfExporter accounts={accounts} transactions={transactions} selectedYear={selectedYear} balancesKishu={accountBalancesKishu} />
                 </Stack>
             </Paper>
 

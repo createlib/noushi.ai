@@ -4,7 +4,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 
-export const GlPdfExporter: React.FC<{ accounts: any[], transactions: any[], selectedYear: number }> = ({ accounts, transactions, selectedYear }) => {
+export const GlPdfExporter: React.FC<{ accounts: any[], transactions: any[], selectedYear: number, balancesKishu: Record<number, number> }> = ({ accounts, transactions, selectedYear, balancesKishu }) => {
     const [isGenerating, setIsGenerating] = useState(false);
 
     // Filter accounts that have transactions
@@ -25,14 +25,10 @@ export const GlPdfExporter: React.FC<{ accounts: any[], transactions: any[], sel
             (t.credits || []).some((c: any) => c.code === account.code)
         );
 
-        let currentBalance = 0; // Assuming 0 carryover for simplicity or calculate Kishu
-        // To calculate Kishu:
-        // Actually this is just the current year's transactions right now.
-        // We should really calculate Kishu here, but the user's Excel export didn't have it calculated properly either (it hardcoded '0').
-        // Let's just calculate it quickly.
-        // Oh wait, `transactions` prop here is ONLY the current year's transactions!
-        // So Kishu is 0 unless we pass ALL transactions.
-        // For now, let's keep it consistent with the Excel export (0 carryover).
+        const kishuRaw = balancesKishu[account.code] || 0;
+        const accountKishu = account.type === 'debit' ? kishuRaw : -kishuRaw;
+
+        let currentBalance = accountKishu;
 
         const rows = relatedTransactions.map((t, index) => {
             const isDebit = (t.debits || []).find((d: any) => d.code === account.code);
@@ -68,7 +64,7 @@ export const GlPdfExporter: React.FC<{ accounts: any[], transactions: any[], sel
 
         // Add Kishu row
         const allRows = [
-            { date: '', no: '', oppCode: '', oppName: '前年度繰越', debitAmount: '', creditAmount: '', currentBalance: 0, desc: '' },
+            { date: '', no: '', oppCode: '', oppName: '前年度繰越', debitAmount: '', creditAmount: '', currentBalance: accountKishu, desc: '' },
             ...rows
         ];
 
