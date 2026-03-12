@@ -22,7 +22,8 @@ export default function CameraInput() {
     const [successMsg, setSuccessMsg] = useState('');
     const [editingResult, setEditingResult] = useState<AIResult | null>(null);
 
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const cameraInputRef = useRef<HTMLInputElement>(null);
+    const galleryInputRef = useRef<HTMLInputElement>(null);
     const accounts = useLiveQuery(() => db.accounts.toArray()) || [];
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,7 +45,7 @@ export default function CameraInput() {
             reader.readAsDataURL(file);
         }
         // reset so the same file can be selected again if needed
-        if (fileInputRef.current) fileInputRef.current.value = '';
+        event.target.value = '';
     };
 
     const runAnalysis = async (id: string, base64: string, fileType: string) => {
@@ -184,7 +185,7 @@ export default function CameraInput() {
                         variant="contained"
                         size="large"
                         startIcon={<CameraAlt />}
-                        onClick={() => fileInputRef.current?.click()}
+                        onClick={() => cameraInputRef.current?.click()}
                         sx={{ borderRadius: 8, px: 4, py: 1.2 }}
                         disableElevation
                     >
@@ -194,19 +195,28 @@ export default function CameraInput() {
                         variant="outlined"
                         size="large"
                         startIcon={<UploadFile />}
-                        onClick={() => fileInputRef.current?.click()}
+                        onClick={() => galleryInputRef.current?.click()}
                         sx={{ borderRadius: 8, px: 4, py: 1.2, bgcolor: 'white' }}
                     >
                         写真を選択
                     </Button>
                 </Box>
-                {/* multiple 属性をつけて複数選択可能にする */}
+                {/* カメラ起動用 */}
                 <input
                     type="file"
                     accept="image/*"
                     capture="environment"
                     multiple
-                    ref={fileInputRef}
+                    ref={cameraInputRef}
+                    style={{ display: 'none' }}
+                    onChange={handleFileChange}
+                />
+                {/* フォルダから選択用 */}
+                <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    ref={galleryInputRef}
                     style={{ display: 'none' }}
                     onChange={handleFileChange}
                 />
