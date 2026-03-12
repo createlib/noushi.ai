@@ -9,8 +9,9 @@ import dayjs from 'dayjs';
 import { useFiscalYear } from '../contexts/FiscalYearContext';
 import { useState } from 'react';
 import SyncIcon from '@mui/icons-material/Sync';
-import { IconButton, CircularProgress } from '@mui/material';
-import { loadGisScript, authenticateWithDrive, performSync } from '../services/drive_service';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import { IconButton, CircularProgress, Tooltip } from '@mui/material';
+import { loadGisScript, authenticateWithDrive, performSync, forceUploadSync } from '../services/drive_service';
 
 const COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
 
@@ -27,6 +28,7 @@ export default function Home() {
 
     const settings = useLiveQuery(() => db.settings.get(1));
     const [isSyncing, setIsSyncing] = useState(false);
+    const [isForceUploading, setIsForceUploading] = useState(false);
 
     if (!allTransactions || !accounts) return <Typography p={2}>Loading...</Typography>;
 
@@ -86,6 +88,24 @@ export default function Home() {
         }
     };
 
+    const handleForceUpload = async () => {
+        if (!settings?.useGoogleDriveSync || !settings?.googleClientId || !settings?.googleDriveFileId) return;
+        if (!window.confirm('この端末のデータでDrive上のデータを完全に上書きします。よろしいですか？')) return;
+
+        setIsForceUploading(true);
+        try {
+            await loadGisScript();
+            const token = await authenticateWithDrive(settings.googleClientId);
+            await forceUploadSync(token, settings.googleDriveFileId);
+            alert('Driveへの上書き保存が完了しました。');
+        } catch (err) {
+            console.error('Force Upload error:', err);
+            alert('上書き保存に失敗しました。詳細: ' + (err as Error).message);
+        } finally {
+            setIsForceUploading(false);
+        }
+    };
+
     return (
         <Box p={{ xs: 1, sm: 2 }} pt={2}>
             <Box px={1} mb={3} display="flex" justifyContent="space-between" alignItems="flex-start">
@@ -96,9 +116,18 @@ export default function Home() {
                     </Typography>
                 </Box>
                 {settings?.useGoogleDriveSync && (
-                    <IconButton onClick={handleSync} disabled={isSyncing} color="primary" sx={{ bgcolor: 'primary.50' }}>
-                        {isSyncing ? <CircularProgress size={24} /> : <SyncIcon />}
-                    </IconButton>
+                    <Box display="flex" gap={1}>
+                        <Tooltip title="この端末のデータをDriveへ上書きアップロード">
+                            <IconButton onClick={handleForceUpload} disabled={isSyncing || isForceUploading} color="warning" sx={{ bgcolor: 'warning.50' }}>
+                                {isForceUploading ? <CircularProgress size={24} /> : <CloudUploadIcon />}
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Driveと統合同期 (ダウンロード)">
+                            <IconButton onClick={handleSync} disabled={isSyncing || isForceUploading} color="primary" sx={{ bgcolor: 'primary.50' }}>
+                                {isSyncing ? <CircularProgress size={24} /> : <SyncIcon />}
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
                 )}
             </Box>
 

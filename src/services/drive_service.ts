@@ -213,6 +213,12 @@ export async function performSync(token: string, fileId: string): Promise<void> 
     await uploadTransactions(token, fileId, mergedArray);
 }
 
+// 9. Force Upload Local to Drive (Overwrite)
+export async function forceUploadSync(token: string, fileId: string): Promise<void> {
+    const localData = await db.transactions.toArray();
+    await uploadTransactions(token, fileId, localData);
+}
+
 // Global declaration for Google API
 declare global {
     interface Window {
