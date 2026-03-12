@@ -12,7 +12,8 @@ import { GlPdfExporter } from '../components/GlPdfExporter';
 
 export default function Report() {
     const { selectedYear } = useFiscalYear();
-    const allTransactions = useLiveQuery(() => db.transactions.toArray());
+    const allTransactionsLive = useLiveQuery(() => db.transactions.toArray());
+    const allTransactions = allTransactionsLive?.filter(t => !t.deletedAt);
     const transactions = allTransactions?.filter(t => t.date.startsWith(String(selectedYear)));
     const accounts = useLiveQuery(() => db.accounts.toArray());
 
