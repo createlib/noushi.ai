@@ -6,6 +6,7 @@ import dayjs from 'dayjs';
 
 import { db } from '../db/db';
 import { analyzeReceipt, type AIResult } from '../services/ai_service';
+import { loadGisScript, authenticateWithDrive, performSync } from '../services/drive_service';
 
 interface QueueItem {
     id: string;
@@ -139,6 +140,19 @@ export default function CameraInput() {
                 imageId: localImageId || undefined,
                 createdAt: Date.now(),
             });
+
+            // Auto sync
+            const currentSettings = await db.settings.get(1);
+            if (currentSettings?.useGoogleDriveSync && currentSettings.googleClientId && currentSettings.googleDriveFileId) {
+                try {
+                    await loadGisScript();
+                    const token = await authenticateWithDrive(currentSettings.googleClientId);
+                    await performSync(token, currentSettings.googleDriveFileId);
+                } catch (e) {
+                    console.error('Background sync failed', e);
+                }
+            }
+
             setSuccessMsg('仕訳を登録しました');
             handleRemove(reviewingId);
             closeReview();

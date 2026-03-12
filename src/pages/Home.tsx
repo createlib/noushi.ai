@@ -7,6 +7,10 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import dayjs from 'dayjs';
 import { useFiscalYear } from '../contexts/FiscalYearContext';
+import { useState } from 'react';
+import SyncIcon from '@mui/icons-material/Sync';
+import { IconButton, CircularProgress } from '@mui/material';
+import { loadGisScript, authenticateWithDrive, performSync } from '../services/drive_service';
 
 const COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
 
@@ -20,6 +24,9 @@ export default function Home() {
     const accounts = useLiveQuery(
         () => db.accounts.toArray()
     );
+
+    const settings = useLiveQuery(() => db.settings.get(1));
+    const [isSyncing, setIsSyncing] = useState(false);
 
     if (!allTransactions || !accounts) return <Typography p={2}>Loading...</Typography>;
 
@@ -64,13 +71,35 @@ export default function Home() {
         expenseData.push({ name: 'その他', value: othersValue });
     }
 
+    const handleSync = async () => {
+        if (!settings?.useGoogleDriveSync || !settings?.googleClientId || !settings?.googleDriveFileId) return;
+        setIsSyncing(true);
+        try {
+            await loadGisScript();
+            const token = await authenticateWithDrive(settings.googleClientId);
+            await performSync(token, settings.googleDriveFileId);
+        } catch (err) {
+            console.error('Sync error:', err);
+            alert('同期に失敗しました。詳細: ' + (err as Error).message);
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
     return (
         <Box p={{ xs: 1, sm: 2 }} pt={2}>
-            <Box px={1} mb={3}>
-                <Typography variant="h5" fontWeight="bold">ダッシュボード</Typography>
-                <Typography variant="body2" color="text.secondary">
-                    {selectedYear}年度 の財務サマリーと分析
-                </Typography>
+            <Box px={1} mb={3} display="flex" justifyContent="space-between" alignItems="flex-start">
+                <Box>
+                    <Typography variant="h5" fontWeight="bold">ダッシュボード</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        {selectedYear}年度 の財務サマリーと分析
+                    </Typography>
+                </Box>
+                {settings?.useGoogleDriveSync && (
+                    <IconButton onClick={handleSync} disabled={isSyncing} color="primary" sx={{ bgcolor: 'primary.50' }}>
+                        {isSyncing ? <CircularProgress size={24} /> : <SyncIcon />}
+                    </IconButton>
+                )}
             </Box>
 
             <Box display="grid" gridTemplateColumns={{ xs: '1fr', sm: 'repeat(3, 1fr)' }} gap={2} sx={{ mb: 4, px: 1 }}>

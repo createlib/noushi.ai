@@ -27,6 +27,9 @@ export interface Settings {
     geminiApiKey: string;
     aiModel?: string;
     saveDirectoryHandle?: any;
+    googleClientId?: string;
+    useGoogleDriveSync?: boolean;
+    googleDriveFileId?: string;
 }
 
 export class AccountingDB extends Dexie {
