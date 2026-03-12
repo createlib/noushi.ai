@@ -7,8 +7,24 @@ export interface DriveTokenResult {
     expires_in: number;
 }
 
-let cachedToken: string | null = null;
-let tokenExpiryTime: number = 0;
+function getCachedToken(): { token: string; expiry: number } | null {
+    const raw = localStorage.getItem('drive_auth_token');
+    if (!raw) return null;
+    try {
+        return JSON.parse(raw);
+    } catch {
+        return null;
+    }
+}
+
+function setCachedToken(token: string, expiresInSeconds: number) {
+    const expiry = Date.now() + (expiresInSeconds * 1000);
+    localStorage.setItem('drive_auth_token', JSON.stringify({ token, expiry }));
+}
+
+export function clearCachedToken() {
+    localStorage.removeItem('drive_auth_token');
+}
 
 // 1. Load GSI script dynamically
 export function loadGisScript(): Promise<void> {
@@ -28,11 +44,18 @@ export function loadGisScript(): Promise<void> {
 }
 
 // 2. Init and request token
-export function authenticateWithDrive(clientId: string): Promise<string> {
+export function authenticateWithDrive(clientId: string, interactive: boolean = true): Promise<string> {
     return new Promise((resolve, reject) => {
-        // Return cached token if still valid (adding a small buffer for safety)
-        if (cachedToken && Date.now() < tokenExpiryTime - 60000) {
-            resolve(cachedToken as string);
+        // Return cached token from localStorage if still valid (adding a small buffer for safety)
+        const cached = getCachedToken();
+        if (cached && Date.now() < cached.expiry - 60000) {
+            resolve(cached.token);
+            return;
+        }
+
+        // If not interactive and we have no valid token, fail silently instead of triggering popup
+        if (!interactive) {
+            reject(new Error('No valid cached token. Background sync skipped.'));
             return;
         }
 
@@ -44,10 +67,8 @@ export function authenticateWithDrive(clientId: string): Promise<string> {
                     if (tokenResponse.error !== undefined) {
                         reject(new Error(tokenResponse.error));
                     } else {
-                        // Cache the newly acquired token
-                        cachedToken = tokenResponse.access_token;
-                        // expiresIn is usually 3599 seconds
-                        tokenExpiryTime = Date.now() + (tokenResponse.expires_in * 1000);
+                        // Cache the newly acquired token in localStorage
+                        setCachedToken(tokenResponse.access_token, tokenResponse.expires_in);
                         resolve(tokenResponse.access_token);
                     }
                 },

@@ -22,6 +22,7 @@ export default function CameraInput() {
     const [reviewingId, setReviewingId] = useState<string | null>(null);
     const [successMsg, setSuccessMsg] = useState('');
     const [editingResult, setEditingResult] = useState<AIResult | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
 
     const cameraInputRef = useRef<HTMLInputElement>(null);
     const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -85,9 +86,11 @@ export default function CameraInput() {
     };
 
     const handleSave = async () => {
-        if (!editingResult || !reviewingId) return;
+        if (!editingResult || !reviewingId || isSaving) return;
         const currentItem = queue.find(q => q.id === reviewingId);
         if (!currentItem) return;
+
+        setIsSaving(true);
 
         const totalDebits = editingResult.debits.reduce((sum, d) => sum + d.amount, 0);
         const totalCredits = editingResult.credits.reduce((sum, c) => sum + c.amount, 0);
@@ -146,7 +149,7 @@ export default function CameraInput() {
             if (currentSettings?.useGoogleDriveSync && currentSettings.googleClientId && currentSettings.googleDriveFileId) {
                 try {
                     await loadGisScript();
-                    const token = await authenticateWithDrive(currentSettings.googleClientId);
+                    const token = await authenticateWithDrive(currentSettings.googleClientId, false); // interactive = false
                     await performSync(token, currentSettings.googleDriveFileId);
                 } catch (e) {
                     console.error('Background sync failed', e);
@@ -158,6 +161,8 @@ export default function CameraInput() {
             closeReview();
         } catch (e) {
             alert('保存に失敗しました');
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -367,8 +372,8 @@ export default function CameraInput() {
                                 onChange={(e) => setEditingResult({ ...editingResult, description: e.target.value })}
                             />
 
-                            <Button variant="contained" fullWidth color="primary" sx={{ borderRadius: 8, py: 1.5, mt: 1 }} disableElevation onClick={handleSave}>
-                                この内容で登録する
+                            <Button variant="contained" fullWidth color="primary" sx={{ borderRadius: 8, py: 1.5, mt: 1 }} disableElevation onClick={handleSave} disabled={isSaving}>
+                                {isSaving ? '登録中...' : 'この内容で登録する'}
                             </Button>
                         </Box>
                     </Box>
