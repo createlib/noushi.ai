@@ -32,7 +32,7 @@ export default function Report() {
         });
     }, [allJournalsLive, allLinesLive]);
 
-    const transactions = allTransactions?.filter(t => t.date.startsWith(String(selectedYear)));
+    const transactions = allTransactions?.filter(t => t.date && t.date.startsWith(String(selectedYear)));
 
     if (!allTransactions || !accounts || !transactions) return <Typography p={2}>Loading...</Typography>;
 
@@ -49,6 +49,7 @@ export default function Report() {
     const pastTransactionsByYear: Record<string, any[]> = {};
 
     allTransactions.forEach(t => {
+        if (!t.date) return;
         const tYear = t.date.substring(0, 4);
         const sYear = String(selectedYear);
 

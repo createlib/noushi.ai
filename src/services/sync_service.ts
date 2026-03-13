@@ -62,7 +62,7 @@ export async function performSync(uid: string): Promise<void> {
     // ============================================
     const localJournals = await db.journals.toArray();
     const localJMap = new Map(localJournals.map(j => [j.id, j]));
-    const remoteJMap = new Map(remoteData.journals.map(j => [j.id, j]));
+    const remoteJMap = new Map((remoteData.journals || []).map(j => [j.id, j]));
 
     const mergedJournalsMap = new Map<string, Journal>();
     const allJournalIds = new Set([...localJMap.keys(), ...remoteJMap.keys()]);
@@ -104,7 +104,7 @@ export async function performSync(uid: string): Promise<void> {
 
     // リモート明細のグループ化
     const remoteLinesByJId = new Map<string, JournalLine[]>();
-    for (const line of remoteData.journal_lines) {
+    for (const line of (remoteData.journal_lines || [])) {
         if (!remoteLinesByJId.has(line.journal_id)) remoteLinesByJId.set(line.journal_id, []);
         remoteLinesByJId.get(line.journal_id)!.push(line);
     }

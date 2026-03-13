@@ -93,8 +93,8 @@ export class AccountingDB extends Dexie {
             settings: '++id, geminiApiKey, aiModel'
         });
 
-        // 新スキーマ (v5)
-        this.version(5).stores({
+        // 新スキーマ (v6)
+        this.version(6).stores({
             accounts: 'code, type',
             journals: 'id, date, status, deletedAt',
             journal_lines: 'id, journal_id, account_id',

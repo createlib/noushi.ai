@@ -152,7 +152,7 @@ export default function Settings() {
                 open={saveSuccess}
                 autoHideDuration={3000}
                 onClose={() => setSaveSuccess(false)}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
             >
                 <Alert severity="success" elevation={6} variant="filled">
                     設定を保存しました
@@ -163,7 +163,7 @@ export default function Settings() {
                 open={!!syncError}
                 autoHideDuration={4000}
                 onClose={() => setSyncError(null)}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
             >
                 <Alert severity="error" elevation={6} variant="filled">
                     {syncError}

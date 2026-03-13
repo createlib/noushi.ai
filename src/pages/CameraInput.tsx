@@ -351,7 +351,7 @@ export default function CameraInput() {
                 )}
             </Dialog>
 
-            <Snackbar open={!!successMsg} autoHideDuration={3000} onClose={() => setSuccessMsg('')} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+            <Snackbar open={!!successMsg} autoHideDuration={3000} onClose={() => setSuccessMsg('')} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
                 <Alert severity="success" elevation={6} variant="filled">{successMsg}</Alert>
             </Snackbar>
         </Box>
