@@ -28,12 +28,12 @@ function YearSelector() {
   const { selectedYear, setSelectedYear } = useFiscalYear();
   const currentYear = new Date().getFullYear();
 
-  const allTx = useLiveQuery(() => db.transactions.toArray());
+  const allTx = useLiveQuery(() => db.journals.toArray());
 
   let validYears: number[] = [currentYear];
   if (allTx) {
     const txYears = allTx
-      .map((t: any) => parseInt(t.date.substring(0, 4), 10))
+      .map((t: any) => t.date ? parseInt(t.date.substring(0, 4), 10) : NaN)
       .filter((y: any) => !isNaN(y) && y > 1900 && y < 2100);
     validYears = Array.from(new Set([...validYears, ...txYears])).sort((a, b) => b - a);
   }

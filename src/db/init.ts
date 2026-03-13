@@ -129,6 +129,8 @@ export async function rebuildLedger() {
         if (!jA || !jB) return 0;
 
         if (jA.date !== jB.date) {
+            if (!jA.date) return 1;
+            if (!jB.date) return -1;
             return jA.date.localeCompare(jB.date);
         }
         return a.journal_id.localeCompare(b.journal_id);
@@ -172,6 +174,7 @@ export async function rebuildFiscalPeriods() {
     const years = new Set<number>();
 
     journals.forEach(j => {
+        if (!j.date) return;
         const y = parseInt(j.date.substring(0, 4), 10);
         if (!isNaN(y)) years.add(y);
     });

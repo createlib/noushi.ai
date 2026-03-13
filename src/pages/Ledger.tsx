@@ -15,7 +15,7 @@ export default function Ledger() {
     const allLines = useLiveQuery(() => db.journal_lines.toArray());
     const accounts = useLiveQuery(() => db.accounts.toArray());
 
-    const journals = allJournals?.filter(j => j.date.startsWith(String(selectedYear)) && !j.deletedAt);
+    const journals = allJournals?.filter(j => j.date && j.date.startsWith(String(selectedYear)) && !j.deletedAt);
 
     const [editorOpen, setEditorOpen] = useState(false);
     const [editingJournal, setEditingJournal] = useState<Journal | null>(null);

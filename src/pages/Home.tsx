@@ -29,7 +29,7 @@ export default function Home() {
     if (!journals || !journalLines || !accounts) return <Typography p={2}>Loading...</Typography>;
 
     // Filter valid journals for the selected year
-    const yearJournals = journals.filter(j => j.date.startsWith(String(selectedYear)) && !j.deletedAt);
+    const yearJournals = journals.filter(j => j.date && j.date.startsWith(String(selectedYear)) && !j.deletedAt);
     const yearJournalIds = new Set(yearJournals.map(j => j.id));
 
     // Get lines for those valid journals
