@@ -12,9 +12,9 @@ import { useFiscalYear } from '../contexts/FiscalYearContext';
 export default function Ledger() {
     const { selectedYear } = useFiscalYear();
 
-    const allJournals = useLiveQuery(() => db.journals.orderBy('date').reverse().toArray());
-    const allLines = useLiveQuery(() => db.journal_lines.toArray());
-    const accounts = useLiveQuery(() => db.accounts.toArray());
+    const allJournals = useLiveQuery(() => db.journals.orderBy('date').reverse().toArray(), []);
+    const allLines = useLiveQuery(() => db.journal_lines.toArray(), []);
+    const accounts = useLiveQuery(() => db.accounts.toArray(), []);
 
     const journals = allJournals?.filter(j => j.date && j.date.startsWith(String(selectedYear)) && !j.deletedAt);
 
@@ -49,11 +49,9 @@ export default function Ledger() {
             setTimeout(() => {
                 (async () => {
                     try {
-                        // まずヘッダを消す
-                        await db.journals.bulkDelete(ids);
-
-                        // 次に明細を消す (anyOf をやめて、1つずつ安全に高速ループ処理)
-                        await db.transaction('rw', [db.journal_lines], async () => {
+                        // ヘッダと明細の削除を同一トランザクション内にまとめる（LiveQueryの2回発火・一時的な不整合を防止）
+                        await db.transaction('rw', [db.journals, db.journal_lines], async () => {
+                            await db.journals.bulkDelete(ids);
                             for (const jId of ids) {
                                 await db.journal_lines.where('journal_id').equals(jId).delete();
                             }

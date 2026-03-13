@@ -18,10 +18,10 @@ const COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6', '#06b6d4'
 export default function Home() {
     const { selectedYear } = useFiscalYear();
 
-    const journals = useLiveQuery(() => db.journals.toArray());
-    const journalLines = useLiveQuery(() => db.journal_lines.toArray());
-    const accounts = useLiveQuery(() => db.accounts.toArray());
-    const settings = useLiveQuery(() => db.settings.get(1));
+    const journals = useLiveQuery(() => db.journals.toArray(), []);
+    const journalLines = useLiveQuery(() => db.journal_lines.toArray(), []);
+    const accounts = useLiveQuery(() => db.accounts.toArray(), []);
+    const settings = useLiveQuery(() => db.settings.get(1), []);
 
     const [isSyncing, setIsSyncing] = useState(false);
     const [isForceUploading, setIsForceUploading] = useState(false);

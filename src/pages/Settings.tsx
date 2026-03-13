@@ -8,7 +8,7 @@ import 'dexie-export-import';
 import { forceUploadSync } from '../services/sync_service';
 
 export default function Settings() {
-    const currentSettings = useLiveQuery(() => db.settings.get(1));
+    const currentSettings = useLiveQuery(() => db.settings.get(1), []);
     const [apiKey, setApiKey] = useState('');
     const [aiModel, setAiModel] = useState('gemini-2.5-flash');
     const [useFirebaseSync, setUseFirebaseSync] = useState(false);

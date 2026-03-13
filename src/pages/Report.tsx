@@ -14,9 +14,9 @@ import { GlPdfExporter } from '../components/GlPdfExporter';
 export default function Report() {
     const { selectedYear } = useFiscalYear();
 
-    const allJournalsLive = useLiveQuery(() => db.journals.orderBy('date').toArray());
-    const allLinesLive = useLiveQuery(() => db.journal_lines.toArray());
-    const accounts = useLiveQuery(() => db.accounts.toArray());
+    const allJournalsLive = useLiveQuery(() => db.journals.orderBy('date').toArray(), []);
+    const allLinesLive = useLiveQuery(() => db.journal_lines.toArray(), []);
+    const accounts = useLiveQuery(() => db.accounts.toArray(), []);
 
     const allTransactions = React.useMemo(() => {
         if (!allJournalsLive || !allLinesLive) return null;

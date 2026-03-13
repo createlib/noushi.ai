@@ -27,7 +27,7 @@ export default function CameraInput() {
 
     const cameraInputRef = useRef<HTMLInputElement>(null);
     const galleryInputRef = useRef<HTMLInputElement>(null);
-    const accounts = useLiveQuery(() => db.accounts.toArray()) || [];
+    const accounts = useLiveQuery(() => db.accounts.toArray(), []) || [];
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files;
