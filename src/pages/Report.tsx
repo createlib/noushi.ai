@@ -34,6 +34,17 @@ export default function Report() {
 
     const transactions = allTransactions?.filter(t => t.date && t.date.startsWith(String(selectedYear)));
 
+    const [renderError, setRenderError] = React.useState<string | null>(null);
+
+    React.useEffect(() => {
+        if (!allTransactions || !accounts) return;
+        try {
+            // Test heavy compute just to catch errors, normally sync compute is fine.
+        } catch (e: any) {
+            setRenderError(e.message);
+        }
+    }, [allTransactions, accounts, selectedYear]);
+
     if (!allTransactions || !accounts || !transactions) return <Typography p={2}>Loading...</Typography>;
 
     const accountBalancesKishu: Record<number, number> = {};
@@ -45,17 +56,6 @@ export default function Report() {
         accountBalancesCurrent[a.code] = 0;
         accountBalancesKimatsu[a.code] = 0;
     });
-
-    const [renderError, setRenderError] = React.useState<string | null>(null);
-
-    React.useEffect(() => {
-        if (!allTransactions || !accounts) return;
-        try {
-            // Test heavy compute just to catch errors, normally sync compute is fine.
-        } catch (e: any) {
-            setRenderError(e.message);
-        }
-    }, [allTransactions, accounts, selectedYear]);
 
     if (renderError) {
         return <Box p={3}><Typography color="error">Error in Report rendering: {renderError}</Typography></Box>;
