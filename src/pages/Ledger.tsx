@@ -42,34 +42,36 @@ export default function Ledger() {
         if (!ids.length) return;
         const msg = ids.length === 1 ? '本当に削除しますか？' : `${ids.length}件の仕訳をまとめて削除しますか？`;
         if (window.confirm(msg)) {
-            // Hard Delete
-            await db.transaction('rw', [db.journals, db.journal_lines], async () => {
-                await db.journals.bulkDelete(ids);
-                const linesToDelete = await db.journal_lines.where('journal_id').anyOf(ids).primaryKeys();
-                await db.journal_lines.bulkDelete(linesToDelete);
-            });
-
+            // UI上の選択状態を即座に解除 (即時反映の第一歩)
             setSelectedIds(new Set());
 
-            // 背景で同期を実行
-            setTimeout(async () => {
-                try {
-                    const currentSettings = await db.settings.get(1);
-                    if (currentSettings?.useFirebaseSync) {
-                        const { auth } = await import('../firebase');
-                        if (auth.currentUser) {
-                            try {
-                                const { forceUploadSync } = await import('../services/sync_service');
-                                await forceUploadSync(auth.currentUser.uid);
-                            } catch (e) {
-                                console.error('Delete background sync failed', e);
+            // 背景でDB処理と同期を実行して完全非同期化 (UIフリーズ防止)
+            setTimeout(() => {
+                (async () => {
+                    try {
+                        await db.transaction('rw', [db.journals, db.journal_lines], async () => {
+                            await db.journals.bulkDelete(ids);
+                            const linesToDelete = await db.journal_lines.where('journal_id').anyOf(ids).primaryKeys();
+                            await db.journal_lines.bulkDelete(linesToDelete);
+                        });
+
+                        const currentSettings = await db.settings.get(1);
+                        if (currentSettings?.useFirebaseSync) {
+                            const { auth } = await import('../firebase');
+                            if (auth.currentUser) {
+                                try {
+                                    const { forceUploadSync } = await import('../services/sync_service');
+                                    await forceUploadSync(auth.currentUser.uid);
+                                } catch (e) {
+                                    console.error('Delete background sync failed', e);
+                                }
                             }
                         }
+                    } catch (e) {
+                        console.error('Background processing failed', e);
                     }
-                } catch (e) {
-                    console.error('Background processing failed', e);
-                }
-            }, 100);
+                })();
+            }, 50);
         }
     };
 

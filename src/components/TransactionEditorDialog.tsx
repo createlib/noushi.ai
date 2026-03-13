@@ -64,69 +64,74 @@ export default function TransactionEditorDialog({ open, onClose, journalToEdit }
             const now = Date.now();
             let journalId = journalToEdit?.id || crypto.randomUUID();
 
-            await db.transaction('rw', [db.journals, db.journal_lines], async () => {
-                if (journalToEdit) {
-                    await db.journals.update(journalId, {
-                        date, description, updatedAt: now
-                    });
-                    // Clear existing lines to replace them
-                    const existingLines = await db.journal_lines.where('journal_id').equals(journalId).toArray();
-                    const existingLineIds = existingLines.map(l => l.id);
-                    await db.journal_lines.bulkDelete(existingLineIds);
-                } else {
-                    await db.journals.add({
-                        id: journalId,
-                        date, description, status: 'posted',
-                        createdAt: now,
-                        updatedAt: now
-                    });
-                }
+            // 1. Snapshot the data we need to save so it's not dependent on component state after unmount
+            const savePayload = {
+                journalId,
+                date,
+                description,
+                now,
+                isEdit: !!journalToEdit,
+                debitsSnapshot: [...debits],
+                creditsSnapshot: [...credits]
+            };
 
-                // Add lines
-                const newLines: any[] = [];
-                debits.forEach(d => {
-                    newLines.push({
-                        id: crypto.randomUUID(),
-                        journal_id: journalId,
-                        account_id: d.code,
-                        debit: d.amount,
-                        credit: 0
-                    });
-                });
-                credits.forEach(c => {
-                    newLines.push({
-                        id: crypto.randomUUID(),
-                        journal_id: journalId,
-                        account_id: c.code,
-                        debit: 0,
-                        credit: c.amount
-                    });
-                });
-                await db.journal_lines.bulkAdd(newLines);
-            });
-
-            // UIを即座に解放
+            // 2. Reactに即座にダイアログを閉じるよう指示し、レンダリングを完了させる
             onClose();
 
-            // 背景で同期を実行
-            setTimeout(async () => {
-                try {
-                    const currentSettings = await db.settings.get(1);
-                    if (currentSettings?.useFirebaseSync && auth.currentUser) {
-                        try {
-                            const { forceUploadSync } = await import('../services/sync_service');
-                            await forceUploadSync(auth.currentUser.uid);
-                        } catch (e) {
-                            console.error('Background sync failed', e);
+            // 3. 次のイベントループ（UI更新後）にDB処理を回す
+            setTimeout(() => {
+                // 非同期の即時実行関数でDBトランザクションを囲む
+                (async () => {
+                    try {
+                        await db.transaction('rw', [db.journals, db.journal_lines], async () => {
+                            if (savePayload.isEdit) {
+                                await db.journals.update(savePayload.journalId, {
+                                    date: savePayload.date,
+                                    description: savePayload.description,
+                                    updatedAt: savePayload.now
+                                });
+                                const existingLines = await db.journal_lines.where('journal_id').equals(savePayload.journalId).toArray();
+                                const existingLineIds = existingLines.map(l => l.id);
+                                await db.journal_lines.bulkDelete(existingLineIds);
+                            } else {
+                                await db.journals.add({
+                                    id: savePayload.journalId,
+                                    date: savePayload.date,
+                                    description: savePayload.description,
+                                    status: 'posted',
+                                    createdAt: savePayload.now,
+                                    updatedAt: savePayload.now
+                                });
+                            }
+
+                            const newLines: any[] = [];
+                            savePayload.debitsSnapshot.forEach(d => {
+                                newLines.push({ id: crypto.randomUUID(), journal_id: savePayload.journalId, account_id: d.code, debit: d.amount, credit: 0 });
+                            });
+                            savePayload.creditsSnapshot.forEach(c => {
+                                newLines.push({ id: crypto.randomUUID(), journal_id: savePayload.journalId, account_id: c.code, debit: 0, credit: c.amount });
+                            });
+                            await db.journal_lines.bulkAdd(newLines);
+                        });
+
+                        // 4. クラウド同期
+                        const currentSettings = await db.settings.get(1);
+                        if (currentSettings?.useFirebaseSync && auth.currentUser) {
+                            try {
+                                const { forceUploadSync } = await import('../services/sync_service');
+                                await forceUploadSync(auth.currentUser.uid);
+                            } catch (e) {
+                                console.error('Background sync failed', e);
+                            }
                         }
+                    } catch (e) {
+                        console.error('Background DB processing failed', e);
                     }
-                } catch (e) {
-                    console.error('Background processing failed', e);
-                }
-            }, 100);
+                })();
+            }, 50); // 50ms待って確実にReactのレンダリング（ダイアログクローズ）を完了させる
 
         } catch (err) {
-            setErrorMsg('保存に失敗しました');
+            setErrorMsg('保存処理の準備に失敗しました');
         }
     };
 

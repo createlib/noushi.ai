@@ -123,66 +123,67 @@ export default function CSVImport() {
             const now = Date.now();
             const journalId = crypto.randomUUID();
 
-            await db.transaction('rw', [db.journals, db.journal_lines], async () => {
-                await db.journals.add({
-                    id: journalId,
-                    date: editingResult.date || dayjs().format('YYYY-MM-DD'),
-                    description: editingResult.description || '',
-                    status: 'posted',
-                    createdAt: now,
-                    updatedAt: now
-                });
+            // 1. Snapshot the data
+            const savePayload = {
+                journalId,
+                date: editingResult.date || dayjs().format('YYYY-MM-DD'),
+                description: editingResult.description || '',
+                now,
+                reviewingIdToClose: reviewingId,
+                debitsSnapshot: [...editingResult.debits],
+                creditsSnapshot: [...editingResult.credits]
+            };
 
-                const newLines: any[] = [];
-                editingResult.debits.forEach(d => {
-                    newLines.push({
-                        id: crypto.randomUUID(),
-                        journal_id: journalId,
-                        account_id: d.code,
-                        debit: d.amount,
-                        credit: 0
-                    });
-                });
-                editingResult.credits.forEach(c => {
-                    newLines.push({
-                        id: crypto.randomUUID(),
-                        journal_id: journalId,
-                        account_id: c.code,
-                        debit: 0,
-                        credit: c.amount
-                    });
-                });
-                await db.journal_lines.bulkAdd(newLines);
-            });
-
-            // UIを即座に解放
+            // 2. UIを即座に解放
             setSuccessMsg('仕訳を登録しました');
-            handleRemove(reviewingId);
+            handleRemove(savePayload.reviewingIdToClose);
             closeReview();
 
-            // 背景処理で同期を実行
-            setTimeout(async () => {
-                try {
-                    const currentSettings = await db.settings.get(1);
-                    if (currentSettings?.useFirebaseSync) {
-                        const { auth } = await import('../firebase');
-                        if (auth.currentUser) {
-                            try {
-                                const { forceUploadSync } = await import('../services/sync_service');
-                                await forceUploadSync(auth.currentUser.uid);
-                            } catch (e) {
-                                console.error('CSV import background sync failed', e);
+            // 3. 背景処理でDB保存と同期を実行（次のイベントループへ）
+            setTimeout(() => {
+                (async () => {
+                    try {
+                        await db.transaction('rw', [db.journals, db.journal_lines], async () => {
+                            await db.journals.add({
+                                id: savePayload.journalId,
+                                date: savePayload.date,
+                                description: savePayload.description,
+                                status: 'posted',
+                                createdAt: savePayload.now,
+                                updatedAt: savePayload.now
+                            });
+
+                            const newLines: any[] = [];
+                            savePayload.debitsSnapshot.forEach(d => {
+                                newLines.push({ id: crypto.randomUUID(), journal_id: savePayload.journalId, account_id: d.code, debit: d.amount, credit: 0 });
+                            });
+                            savePayload.creditsSnapshot.forEach(c => {
+                                newLines.push({ id: crypto.randomUUID(), journal_id: savePayload.journalId, account_id: c.code, debit: 0, credit: c.amount });
+                            });
+                            await db.journal_lines.bulkAdd(newLines);
+                        });
+
+                        const currentSettings = await db.settings.get(1);
+                        if (currentSettings?.useFirebaseSync) {
+                            const { auth } = await import('../firebase');
+                            if (auth.currentUser) {
+                                try {
+                                    const { forceUploadSync } = await import('../services/sync_service');
+                                    await forceUploadSync(auth.currentUser.uid);
+                                } catch (e) {
+                                    console.error('CSV import background sync failed', e);
+                                }
                             }
                         }
+                    } catch (e) {
+                        console.error('Background processing failed', e);
                     }
-                } catch (e) {
-                    console.error('Background processing failed', e);
-                }
-            }, 100);
+                })();
+            }, 50);
 
         } catch (e: any) {
             console.error(e);
-            alert('保存に失敗しました');
+            alert('保存処理の準備に失敗しました');
         }
     };
 
