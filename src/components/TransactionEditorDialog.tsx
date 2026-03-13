@@ -5,7 +5,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
 import { db, type Journal } from '../db/db';
 import { auth } from '../firebase';
-import { forceUploadSync } from '../services/sync_service';
+// import { forceUploadSync } removed to avoid unused variable warning
 
 interface Props {
     open: boolean;
@@ -105,22 +105,30 @@ export default function TransactionEditorDialog({ open, onClose, journalToEdit }
                 await db.journal_lines.bulkAdd(newLines);
             });
 
-            // Rebuild Ledger
-            const { rebuildLedger, rebuildFiscalPeriods } = await import('../db/init');
-            await rebuildLedger();
-            await rebuildFiscalPeriods();
-
-            // Auto sync
-            const currentSettings = await db.settings.get(1);
-            if (currentSettings?.useFirebaseSync && auth.currentUser) {
-                try {
-                    await forceUploadSync(auth.currentUser.uid);
-                } catch (e) {
-                    console.error('Background sync failed', e);
-                }
-            }
-
+            // UIを即座に解放
             onClose();
+
+            // 背景で元帳再構築と同期を実行
+            setTimeout(async () => {
+                try {
+                    const { rebuildLedger, rebuildFiscalPeriods } = await import('../db/init');
+                    await rebuildLedger();
+                    await rebuildFiscalPeriods();
+
+                    const currentSettings = await db.settings.get(1);
+                    if (currentSettings?.useFirebaseSync && auth.currentUser) {
+                        try {
+                            const { forceUploadSync } = await import('../services/sync_service');
+                            await forceUploadSync(auth.currentUser.uid);
+                        } catch (e) {
+                            console.error('Background sync failed', e);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Background processing failed', e);
+                }
+            }, 100);
+
         } catch (err) {
             setErrorMsg('保存に失敗しました');
         }

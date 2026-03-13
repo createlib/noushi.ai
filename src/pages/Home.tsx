@@ -40,7 +40,7 @@ export default function Home() {
     const yearlyExpenses: Record<string, number> = {};
 
     yearLines.forEach(line => {
-        const acc = accounts.find(a => (a.code || a.id) === line.account_id);
+        const acc = accounts.find(a => String(a.code || a.id) === String(line.account_id));
         if (!acc) return;
 
         if (acc.type === 'revenue' && line.credit > 0) {
@@ -213,8 +213,8 @@ export default function Home() {
                     const creditsArray = lines.filter(l => l.credit > 0);
 
                     const totalAmount = debitsArray.reduce((sum, d) => sum + d.debit, 0);
-                    const debNames = debitsArray.map(d => accounts.find(a => (a.code || a.id) === d.account_id)?.name || '不明').join(',');
-                    const creNames = creditsArray.map(c => accounts.find(a => (a.code || a.id) === c.account_id)?.name || '不明').join(',');
+                    const debNames = debitsArray.map(d => accounts.find(a => String(a.code || a.id) === String(d.account_id))?.name || '不明').join(',');
+                    const creNames = creditsArray.map(c => accounts.find(a => String(a.code || a.id) === String(c.account_id))?.name || '不明').join(',');
 
                     return (
                         <Box key={j.id || idx} p={1.5} borderBottom={idx < yearJournals.slice(-3).length - 1 ? 1 : 0} borderColor="divider" display="flex" justifyContent="space-between" alignItems="center" sx={{ '&:hover': { bgcolor: '#f8fafc' }, flexWrap: { xs: 'wrap', sm: 'nowrap' }, gap: 1 }}>

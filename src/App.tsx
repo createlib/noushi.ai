@@ -15,6 +15,7 @@ import DataInputTabs from './pages/DataInputTabs';
 import Report from './pages/Report';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import { FiscalYearProvider, useFiscalYear } from './contexts/FiscalYearContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Select, MenuItem, FormControl } from '@mui/material';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -176,57 +177,59 @@ function App() {
       <AuthProvider>
         <FiscalYearProvider>
           <CssBaseline />
-          <BrowserRouter>
-            <Box sx={{ pb: 7, maxWidth: '800px', mx: 'auto', width: '100%', minHeight: '100vh', bgcolor: 'background.default', boxShadow: '0 0 20px rgba(0,0,0,0.05)', position: 'relative' }}>
-              <AppBar position="sticky" elevation={0} sx={{ borderBottom: '1px solid', borderColor: 'divider', zIndex: 1100 }}>
-                <Toolbar>
-                  <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold', color: 'primary.main', display: 'flex', alignItems: 'center', gap: 1 }}>
-                    AI脳死申告
-                  </Typography>
-                  <YearSelector />
-                </Toolbar>
-              </AppBar>
+          <ErrorBoundary>
+            <BrowserRouter>
+              <Box sx={{ pb: 7, maxWidth: '800px', mx: 'auto', width: '100%', minHeight: '100vh', bgcolor: 'background.default', boxShadow: '0 0 20px rgba(0,0,0,0.05)', position: 'relative' }}>
+                <AppBar position="sticky" elevation={0} sx={{ borderBottom: '1px solid', borderColor: 'divider', zIndex: 1100 }}>
+                  <Toolbar>
+                    <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold', color: 'primary.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+                      AI脳死申告
+                    </Typography>
+                    <YearSelector />
+                  </Toolbar>
+                </AppBar>
 
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-                <Route path="/import" element={<ProtectedRoute><DataInputTabs /></ProtectedRoute>} />
-                <Route path="/ledger" element={<ProtectedRoute><Ledger /></ProtectedRoute>} />
-                <Route path="/report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
-                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              </Routes>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+                  <Route path="/import" element={<ProtectedRoute><DataInputTabs /></ProtectedRoute>} />
+                  <Route path="/ledger" element={<ProtectedRoute><Ledger /></ProtectedRoute>} />
+                  <Route path="/report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
+                  <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                </Routes>
 
-              {/* Navigation is only relevant for authenticated users viewing protected routes */}
-              <Routes>
-                <Route path="/login" element={null} />
-                <Route path="*" element={
-                  <Box sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1000, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
-                    <Paper sx={{ width: '100%', maxWidth: '800px', pb: 'env(safe-area-inset-bottom)', pointerEvents: 'auto', borderRadius: { xs: 0, md: '16px 16px 0 0' }, overflow: 'hidden' }} elevation={3}>
-                      <BottomNavigation
-                        showLabels
-                        value={navValue}
-                        onChange={(_, newValue) => {
-                          setNavValue(newValue);
-                        }}
-                      >
-                        <BottomNavigationAction component={Link} to="/" label="ホーム" icon={<HomeIcon />} />
-                        <BottomNavigationAction component={Link} to="/ledger" label="仕訳帳" icon={<ReceiptIcon />} />
-                        <BottomNavigationAction
-                          component={Link}
-                          to="/import"
-                          label="データ入力"
-                          icon={<CameraAltIcon sx={{ fontSize: 32, color: 'primary.main' }} />}
-                        />
-                        <BottomNavigationAction component={Link} to="/report" label="各種帳簿" icon={<AssessmentIcon />} />
-                        <BottomNavigationAction component={Link} to="/settings" label="設定" icon={<SettingsIcon />} />
-                      </BottomNavigation>
-                    </Paper>
-                  </Box>
-                }
-                />
-              </Routes>
-            </Box>
-          </BrowserRouter>
+                {/* Navigation is only relevant for authenticated users viewing protected routes */}
+                <Routes>
+                  <Route path="/login" element={null} />
+                  <Route path="*" element={
+                    <Box sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1000, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
+                      <Paper sx={{ width: '100%', maxWidth: '800px', pb: 'env(safe-area-inset-bottom)', pointerEvents: 'auto', borderRadius: { xs: 0, md: '16px 16px 0 0' }, overflow: 'hidden' }} elevation={3}>
+                        <BottomNavigation
+                          showLabels
+                          value={navValue}
+                          onChange={(_, newValue) => {
+                            setNavValue(newValue);
+                          }}
+                        >
+                          <BottomNavigationAction component={Link} to="/" label="ホーム" icon={<HomeIcon />} />
+                          <BottomNavigationAction component={Link} to="/ledger" label="仕訳帳" icon={<ReceiptIcon />} />
+                          <BottomNavigationAction
+                            component={Link}
+                            to="/import"
+                            label="データ入力"
+                            icon={<CameraAltIcon sx={{ fontSize: 32, color: 'primary.main' }} />}
+                          />
+                          <BottomNavigationAction component={Link} to="/report" label="各種帳簿" icon={<AssessmentIcon />} />
+                          <BottomNavigationAction component={Link} to="/settings" label="設定" icon={<SettingsIcon />} />
+                        </BottomNavigation>
+                      </Paper>
+                    </Box>
+                  }
+                  />
+                </Routes>
+              </Box>
+            </BrowserRouter>
+          </ErrorBoundary>
         </FiscalYearProvider>
       </AuthProvider>
     </ThemeProvider>

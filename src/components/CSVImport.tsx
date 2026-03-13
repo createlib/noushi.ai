@@ -155,29 +155,37 @@ export default function CSVImport() {
                 await db.journal_lines.bulkAdd(newLines);
             });
 
-            // Rebuild Ledger
-            const { rebuildLedger, rebuildFiscalPeriods } = await import('../db/init');
-            await rebuildLedger();
-            await rebuildFiscalPeriods();
-
-            // Auto sync
-            const currentSettings = await db.settings.get(1);
-            if (currentSettings?.useFirebaseSync) {
-                const { auth } = await import('../firebase');
-                const { forceUploadSync } = await import('../services/sync_service');
-                if (auth.currentUser) {
-                    try {
-                        await forceUploadSync(auth.currentUser.uid);
-                    } catch (e) {
-                        console.error('Background sync failed', e);
-                    }
-                }
-            }
-
+            // UIを即座に解放
             setSuccessMsg('仕訳を登録しました');
             handleRemove(reviewingId);
             closeReview();
-        } catch (e) {
+
+            // 背景処理で重いタスクを実行
+            setTimeout(async () => {
+                try {
+                    const { rebuildLedger, rebuildFiscalPeriods } = await import('../db/init');
+                    await rebuildLedger();
+                    await rebuildFiscalPeriods();
+
+                    const currentSettings = await db.settings.get(1);
+                    if (currentSettings?.useFirebaseSync) {
+                        const { auth } = await import('../firebase');
+                        if (auth.currentUser) {
+                            try {
+                                const { forceUploadSync } = await import('../services/sync_service');
+                                await forceUploadSync(auth.currentUser.uid);
+                            } catch (e) {
+                                console.error('CSV import background sync failed', e);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('Background processing failed', e);
+                }
+            }, 100);
+
+        } catch (e: any) {
+            console.error(e);
             alert('保存に失敗しました');
         }
     };

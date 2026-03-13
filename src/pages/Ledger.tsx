@@ -73,8 +73,8 @@ export default function Ledger() {
                             const debAmount = debitsArray.reduce((sum, d) => sum + d.debit, 0);
                             const creAmount = creditsArray.reduce((sum, c) => sum + c.credit, 0);
 
-                            const debNames = debitsArray.map(d => accounts.find(a => (a.code || a.id) === d.account_id)?.name || '不明').join(',');
-                            const creNames = creditsArray.map(c => accounts.find(a => (a.code || a.id) === c.account_id)?.name || '不明').join(',');
+                            const debNames = debitsArray.map(d => accounts.find(a => String(a.code || a.id) === String(d.account_id))?.name || '不明').join(',');
+                            const creNames = creditsArray.map(c => accounts.find(a => String(a.code || a.id) === String(c.account_id))?.name || '不明').join(',');
 
                             return (
                                 <TableRow key={j.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>

@@ -140,28 +140,30 @@ export default function CameraInput() {
                 await db.journal_lines.bulkAdd(lines);
             });
 
-            // 再構築
-            const { rebuildLedger, rebuildFiscalPeriods } = await import('../db/init');
-            await rebuildLedger();
-            await rebuildFiscalPeriods();
-
-            // Auto sync to Firebase
-            const currentSettings = await db.settings.get(1);
-            const currentUser = auth.currentUser;
-            if (currentSettings?.useFirebaseSync && currentUser) {
-                try {
-                    await forceUploadSync(currentUser.uid);
-                } catch (e) {
-                    console.error('Background sync failed', e);
-                }
-            }
-
+            // UIを即座に解放
             setSuccessMsg('仕訳を登録しました');
             handleRemove(reviewingId);
             closeReview();
+            setIsSaving(false);
+
+            // 背景で元帳再構築と同期を実行
+            setTimeout(async () => {
+                try {
+                    const { rebuildLedger, rebuildFiscalPeriods } = await import('../db/init');
+                    await rebuildLedger();
+                    await rebuildFiscalPeriods();
+
+                    const currentSettings = await db.settings.get(1);
+                    if (currentSettings?.useFirebaseSync && auth.currentUser) {
+                        await forceUploadSync(auth.currentUser.uid);
+                    }
+                } catch (e) {
+                    console.error('Background processing failed', e);
+                }
+            }, 100);
+
         } catch (e) {
             alert('保存に失敗しました');
-        } finally {
             setIsSaving(false);
         }
     };
