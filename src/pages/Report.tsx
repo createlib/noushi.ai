@@ -46,705 +46,726 @@ export default function Report() {
         accountBalancesKimatsu[a.code] = 0;
     });
 
-    const pastTransactionsByYear: Record<string, any[]> = {};
+    const [renderError, setRenderError] = React.useState<string | null>(null);
 
-    allTransactions.forEach(t => {
-        if (!t.date) return;
-        const tYear = t.date.substring(0, 4);
-        const sYear = String(selectedYear);
-
-        if (tYear < sYear) {
-            if (!pastTransactionsByYear[tYear]) pastTransactionsByYear[tYear] = [];
-            pastTransactionsByYear[tYear].push(t);
-        } else if (tYear === sYear) {
-            (t.debits || []).forEach((d: any) => {
-                accountBalancesCurrent[d.code] += d.amount;
-            });
-            (t.credits || []).forEach((c: any) => {
-                accountBalancesCurrent[c.code] -= c.amount;
-            });
+    React.useEffect(() => {
+        if (!allTransactions || !accounts) return;
+        try {
+            // Test heavy compute just to catch errors, normally sync compute is fine.
+        } catch (e: any) {
+            setRenderError(e.message);
         }
-    });
+    }, [allTransactions, accounts, selectedYear]);
 
-    const pastYears = Object.keys(pastTransactionsByYear).sort();
-    pastYears.forEach(year => {
-        const txs = pastTransactionsByYear[year];
-        txs.forEach(t => {
-            (t.debits || []).forEach((d: any) => { accountBalancesKishu[d.code] += d.amount; });
-            (t.credits || []).forEach((c: any) => { accountBalancesKishu[c.code] -= c.amount; });
-        });
+    if (renderError) {
+        return <Box p={3}><Typography color="error">Error in Report rendering: {renderError}</Typography></Box>;
+    }
 
-        let deltaCapital = 0;
+    try {
+        const pastTransactionsByYear: Record<string, any[]> = {};
 
-        accounts.forEach(a => {
-            if (isPLAccount(a)) {
-                deltaCapital += accountBalancesKishu[a.code];
-                accountBalancesKishu[a.code] = 0;
-            } else if (a.code === 210 || a.name.includes("事業主貸")) {
-                deltaCapital += accountBalancesKishu[a.code];
-                accountBalancesKishu[a.code] = 0;
-            } else if (a.code === 310 || a.name.includes("事業主借")) {
-                deltaCapital += accountBalancesKishu[a.code];
-                accountBalancesKishu[a.code] = 0;
+        allTransactions.forEach(t => {
+            if (!t.date) return;
+            const tYear = t.date.substring(0, 4);
+            const sYear = String(selectedYear);
+
+
+            if (tYear < sYear) {
+                if (!pastTransactionsByYear[tYear]) pastTransactionsByYear[tYear] = [];
+                pastTransactionsByYear[tYear].push(t);
+            } else if (tYear === sYear) {
+                (t.debits || []).forEach((d: any) => {
+                    accountBalancesCurrent[d.code] += d.amount;
+                });
+                (t.credits || []).forEach((c: any) => {
+                    accountBalancesCurrent[c.code] -= c.amount;
+                });
             }
         });
 
-        let capitalCode = 300;
-        const capitalAcct = accounts.find(a => a.name.includes("元入金"));
-        if (capitalAcct) capitalCode = capitalAcct.code;
-        if (accounts.some(a => a.code === capitalCode)) {
-            accountBalancesKishu[capitalCode] += deltaCapital;
-        }
-    });
-
-    const isPLAccount = (a: any) => a.type === 'revenue' || a.type === 'expense';
-    const isBSAccount = (a: any) => a.type === 'asset' || a.type === 'liability' || a.type === 'equity';
-    const isDebitAccount = (a: any) => a.type === 'asset' || a.type === 'expense';
-    const isCreditAccount = (a: any) => a.type === 'liability' || a.type === 'equity' || a.type === 'revenue';
-
-    accounts.forEach(a => {
-        if (isBSAccount(a)) {
-            accountBalancesKimatsu[a.code] = accountBalancesKishu[a.code] + accountBalancesCurrent[a.code];
-        } else {
-            accountBalancesKimatsu[a.code] = accountBalancesCurrent[a.code];
-        }
-    });
-
-    const getFilteredAccounts = (reportType: 'PL' | 'BS', accNormalBal: 'debit' | 'credit') => {
-        return accounts
-            .filter(a => (reportType === 'PL' ? isPLAccount(a) : isBSAccount(a)) && (accNormalBal === 'debit' ? isDebitAccount(a) : isCreditAccount(a)))
-            .map(a => {
-                const isDebit = isDebitAccount(a);
-
-                const rawKishu = accountBalancesKishu[a.code] || 0;
-                const balanceKishu = isDebit ? rawKishu : -rawKishu;
-
-                const rawCurrent = accountBalancesCurrent[a.code] || 0;
-                const balanceCurrent = isDebit ? rawCurrent : -rawCurrent;
-
-                const rawKimatsu = accountBalancesKimatsu[a.code] || 0;
-                const balanceKimatsu = isDebit ? rawKimatsu : -rawKimatsu;
-
-                const balance = reportType === 'BS' ? balanceKimatsu : balanceCurrent;
-
-                return { ...a, balance, balanceKishu, balanceKimatsu, balanceCurrent, type: (isDebit ? 'debit' : 'credit') as 'debit' | 'credit', report: reportType as 'PL' | 'BS' };
-            })
-            .filter(a => a.balance !== 0 || (reportType === 'BS' && a.balanceKishu !== 0));
-    };
-
-    const plExpenses = getFilteredAccounts('PL', 'debit');
-    const plIncomes = getFilteredAccounts('PL', 'credit');
-
-    const bsAssets = getFilteredAccounts('BS', 'debit');
-    const bsLiabilities = getFilteredAccounts('BS', 'credit');
-
-    // 売上関係
-    const salesCodes = [500, 501, 580, 581, 583, 590, 5999]; // 一般売上
-    const agrSalesCodes = [5100, 5101, 5102]; // 農業売上
-    const reSalesCodes = [5200, 5201, 5202]; // 不動産売上
-
-    const plSales = plIncomes.filter(a => salesCodes.includes(a.code));
-    const plAgrSales = plIncomes.filter(a => agrSalesCodes.includes(a.code));
-    const plRESales = plIncomes.filter(a => reSalesCodes.includes(a.code));
-    const plOtherIncome = plIncomes.filter(a => !salesCodes.includes(a.code) && !agrSalesCodes.includes(a.code) && !reSalesCodes.includes(a.code) && a.code !== 650 && a.code !== 690);
-
-    // 売上原価 (一般)
-    const kishuAssets = plExpenses.filter(a => a.code === 600 || a.code === 605);
-    const shiireAssets = plExpenses.filter(a => a.code === 610);
-    const kimatsuAssets = accounts.filter(a => a.code === 650 || a.code === 690).map(a => {
-        const bal = accountBalancesCurrent[a.code] || 0;
-        return { ...a, balance: -bal };
-    }).filter(a => a.balance !== 0);
-
-    const sumKishu = kishuAssets.reduce((sum, a) => sum + a.balance, 0);
-    const sumShiire = shiireAssets.reduce((sum, a) => sum + a.balance, 0);
-    const sumKimatsu = kimatsuAssets.reduce((sum, a) => sum + a.balance, 0);
-    const cogs = sumKishu + sumShiire - sumKimatsu;
-
-    // 経費分類
-    const agrExpenseCodes = [8000, 8001, 8002, 8003, 8004, 8005, 8006, 8007, 8008, 8009, 8010];
-    const reExpenseCodes = [9000, 9001, 9002, 9003, 9004];
-
-    const plAgrExpenses = plExpenses.filter(a => agrExpenseCodes.includes(a.code));
-    const plREExpenses = plExpenses.filter(a => reExpenseCodes.includes(a.code));
-    const plTrueExpenses = plExpenses.filter(a =>
-        a.code !== 600 && a.code !== 605 && a.code !== 610 &&
-        a.code !== 6498 && a.code !== 6499 &&
-        !agrExpenseCodes.includes(a.code) &&
-        !reExpenseCodes.includes(a.code)
-    );
-
-    // 一般事業の計算
-    const hasGeneralBiz = plSales.length > 0 || plOtherIncome.length > 0 || plTrueExpenses.length > 0 || cogs !== 0;
-    const totalSales = plSales.reduce((sum, a) => sum + a.balance, 0) + plOtherIncome.reduce((sum, a) => sum + a.balance, 0);
-    const grossProfit = totalSales - cogs;
-    const totalTrueExpense = plTrueExpenses.reduce((sum, a) => sum + a.balance, 0);
-    const generalNetIncome = grossProfit - totalTrueExpense;
-
-    // 農業所得の計算
-    const hasAgrBiz = plAgrSales.length > 0 || plAgrExpenses.length > 0;
-    const totalAgrSales = plAgrSales.reduce((sum, a) => sum + a.balance, 0);
-    const totalAgrExpense = plAgrExpenses.reduce((sum, a) => sum + a.balance, 0);
-    const agrNetIncome = totalAgrSales - totalAgrExpense;
-
-    // 不動産所得の計算
-    const hasREBiz = plRESales.length > 0 || plREExpenses.length > 0;
-    const totalRESales = plRESales.reduce((sum, a) => sum + a.balance, 0);
-    const totalREExpense = plREExpenses.reduce((sum, a) => sum + a.balance, 0);
-    const reNetIncome = totalRESales - totalREExpense;
-
-    const netIncome = generalNetIncome + agrNetIncome + reNetIncome;
-
-    const totalAssets = bsAssets.reduce((sum, a) => sum + a.balance, 0);
-    const totalLiabilities = bsLiabilities.reduce((sum, a) => sum + a.balance, 0);
-
-    // B/S 期首の合計
-    const totalAssetsKishu = bsAssets.reduce((sum, a) => sum + a.balanceKishu, 0);
-    const totalLiabilitiesKishu = bsLiabilities.reduce((sum, a) => sum + a.balanceKishu, 0);
-
-    // 製造原価計算
-    const getBal = (code: number, type: 'debit' | 'credit') => {
-        const bal = accountBalancesCurrent[code] || 0;
-        return type === 'debit' ? bal : -bal;
-    };
-    const mfgMaterialKishu = getBal(5310, 'debit');
-    const mfgMaterialShiire = getBal(5300, 'debit');
-    const mfgMaterialKimatsu = getBal(5320, 'credit');
-    const mfgMaterialCost = mfgMaterialKishu + mfgMaterialShiire - mfgMaterialKimatsu;
-
-    const mfgLaborCost = getBal(5400, 'debit');
-
-    const mfgExpenseCodes = [5500, 5510, 5520, 5530, 5590];
-    const mfgExpensesList = plExpenses.filter(a => mfgExpenseCodes.includes(a.code));
-    const mfgExpensesTotal = mfgExpensesList.reduce((sum, a) => sum + a.balance, 0);
-
-    const mfgTotalCost = mfgMaterialCost + mfgLaborCost + mfgExpensesTotal;
-
-    const mfgWipKishu = getBal(5610, 'debit');
-    const mfgWipKimatsu = getBal(5620, 'credit');
-
-    const mfgCostOfGoodsManufactured = mfgTotalCost + mfgWipKishu - mfgWipKimatsu;
-    const hasMfgBiz = mfgCostOfGoodsManufactured > 0 || mfgTotalCost > 0;
-
-    // --- 月別売上・仕入計算 ---
-    const monthlySales = Array(12).fill(0);
-    const monthlyPurchases = Array(12).fill(0);
-    const allSalesCodes = [...salesCodes, ...agrSalesCodes, ...reSalesCodes];
-    const allPurchaseCodes = [610, 5300, 8000]; // 一般仕入, 製造原材料仕入, 農業種苗等
-
-    transactions.forEach(t => {
-        const monthNum = parseInt(t.date.substring(5, 7), 10);
-        if (monthNum >= 1 && monthNum <= 12) {
-            const idx = monthNum - 1;
-            const salesInT = (t.credits || []).filter(c => allSalesCodes.includes(c.code)).reduce((sum, c) => sum + c.amount, 0);
-            monthlySales[idx] += salesInT;
-
-            const purchasesInT = (t.debits || []).filter(d => allPurchaseCodes.includes(d.code)).reduce((sum, d) => sum + d.amount, 0);
-            monthlyPurchases[idx] += purchasesInT;
-        }
-    });
-
-    // --- 各種内訳・計算書用データ作成 (名前による動的コード抽出) ---
-    const getIdBySubstring = (subStr: string) => accounts.filter(a => a.name.includes(subStr)).map(a => a.code);
-    const getPlExpenseTotal = (codes: number[]) => plExpenses.filter(a => codes.includes(a.code)).reduce((sum, a) => sum + a.balance, 0);
-
-    const salaryCodes = getIdBySubstring("給料").concat(getIdBySubstring("賃金"));
-    const familySalaryCodes = getIdBySubstring("専従者");
-    const badDebtProvisionCodes = getIdBySubstring("貸倒引当金");
-    const rentCodes = getIdBySubstring("地代").concat(getIdBySubstring("家賃")).concat(getIdBySubstring("小作料・賃借料"));
-    const depreciationCodes = getIdBySubstring("減価償却費");
-    const interestCodes = getIdBySubstring("利子割引").concat(getIdBySubstring("借入金利子"));
-    const taxAcctCodes = getIdBySubstring("税理士").concat(getIdBySubstring("弁護士"));
-
-    const salaryTotal = getPlExpenseTotal(salaryCodes);
-    const familySalaryTotal = getPlExpenseTotal(familySalaryCodes);
-    const badDebtProvisionTotal = getPlExpenseTotal(badDebtProvisionCodes);
-    const rentTotal = getPlExpenseTotal(rentCodes);
-    const depreciationTotal = getPlExpenseTotal(depreciationCodes);
-    const interestTotal = getPlExpenseTotal(interestCodes);
-    const taxAcctTotal = getPlExpenseTotal(taxAcctCodes);
-    const blueReturnDeduction = accounts.find(a => a.name.includes("青色申告特別控除")) ? 650000 : 0; // Simplified assumption for deduction value if account exists, normally dynamic based on user entry or max 650000
-
-    const handleDownloadExcel = () => {
-        if (!transactions || !accounts) return;
-
-        // 総勘定元帳の生成 (Excelシートごと、あるいは縦に並べる)
-        // 今回の要件にあるように、「年度ごとに」「UIのような形で一覧化」するため、
-        // ひとつのシートに全科目の元帳データを時系列で並べます。
-
-        const wb = XLSX.utils.book_new();
-        const wsData: any[][] = [];
-
-        wsData.push(['総勘定元帳', '', '', '', '', '', '']);
-        wsData.push(['']);
-
-        // 年度ごとにまとめるなら、表示されている取引データの年を取得（ここでは全体を出力）
-        // 各勘定科目ごとにブロックを作成
-        const sortedAccounts = [...accounts].sort((a, b) => a.code - b.code);
-
-        sortedAccounts.forEach(account => {
-            // この科目が関わるトランザクションを抽出
-            const relatedTransactions = transactions.filter(t =>
-                (t.debits || []).some(d => d.code === account.code) ||
-                (t.credits || []).some(c => c.code === account.code)
-            );
-
-            if (relatedTransactions.length === 0) return; // 取引なしはスキップ
-
-            // 勘定科目のヘッダー行
-            const accountKishuRaw = accountBalancesKishu[account.code] || 0;
-            const accountKishu = isDebitAccount(account) ? accountKishuRaw : -accountKishuRaw;
-
-            wsData.push([String(account.code), account.name, isDebitAccount(account) ? '借方' : '貸方']);
-            wsData.push(['日付', '仕訳No / 税区分', '科目コード', '相手科目', '金額 (借方)', '金額 (貸方)', '残高']);
-            wsData.push(['', '', '', '摘要', '', '', '']);
-            wsData.push(['', '', '', '前年度繰越', '', '', accountKishu]);
-
-            let currentBalance = accountKishu;
-
-            relatedTransactions.forEach((t, index) => {
-                const isDebit = (t.debits || []).find(d => d.code === account.code);
-                const isCredit = (t.credits || []).find(c => c.code === account.code);
-
-                let debitAmount = isDebit ? isDebit.amount : '';
-                let creditAmount = isCredit ? isCredit.amount : '';
-
-                if (isDebit) currentBalance += (isDebitAccount(account) ? isDebit.amount : -isDebit.amount);
-                if (isCredit) currentBalance += (isCreditAccount(account) ? isCredit.amount : -isCredit.amount);
-
-                // 相手科目の特定 (複合仕訳の場合は "諸口" とするか、逆側の最初の科目とする)
-                let oppName = '諸口';
-                let oppCode = '999';
-                if (isDebit && (t.credits || []).length === 1) {
-                    oppCode = String(t.credits[0].code);
-                    oppName = accounts.find(a => a.code === t.credits[0].code)?.name || '不明';
-                } else if (isCredit && (t.debits || []).length === 1) {
-                    oppCode = String(t.debits[0].code);
-                    oppName = accounts.find(a => a.code === t.debits[0].code)?.name || '不明';
-                }
-
-                wsData.push([
-                    t.date,
-                    index + 1, // 仕訳No
-                    oppCode,
-                    oppName,
-                    debitAmount,
-                    creditAmount,
-                    currentBalance
-                ]);
-                wsData.push([
-                    '', '', '', t.description || '', '', '', ''
-                ]);
+        const pastYears = Object.keys(pastTransactionsByYear).sort();
+        pastYears.forEach(year => {
+            const txs = pastTransactionsByYear[year];
+            txs.forEach(t => {
+                (t.debits || []).forEach((d: any) => { accountBalancesKishu[d.code] += d.amount; });
+                (t.credits || []).forEach((c: any) => { accountBalancesKishu[c.code] -= c.amount; });
             });
 
-            wsData.push(['']);
-            wsData.push(['']);
+            let deltaCapital = 0;
+
+            accounts.forEach(a => {
+                if (isPLAccount(a)) {
+                    deltaCapital += accountBalancesKishu[a.code];
+                    accountBalancesKishu[a.code] = 0;
+                } else if (a.code === 210 || a.name.includes("事業主貸")) {
+                    deltaCapital += accountBalancesKishu[a.code];
+                    accountBalancesKishu[a.code] = 0;
+                } else if (a.code === 310 || a.name.includes("事業主借")) {
+                    deltaCapital += accountBalancesKishu[a.code];
+                    accountBalancesKishu[a.code] = 0;
+                }
+            });
+
+            let capitalCode = 300;
+            const capitalAcct = accounts.find(a => a.name.includes("元入金"));
+            if (capitalAcct) capitalCode = capitalAcct.code;
+            if (accounts.some(a => a.code === capitalCode)) {
+                accountBalancesKishu[capitalCode] += deltaCapital;
+            }
         });
 
-        const ws = XLSX.utils.aoa_to_sheet(wsData);
-        XLSX.utils.book_append_sheet(wb, ws, "元帳");
+        const isPLAccount = (a: any) => a.type === 'revenue' || a.type === 'expense';
+        const isBSAccount = (a: any) => a.type === 'asset' || a.type === 'liability' || a.type === 'equity';
+        const isDebitAccount = (a: any) => a.type === 'asset' || a.type === 'expense';
+        const isCreditAccount = (a: any) => a.type === 'liability' || a.type === 'equity' || a.type === 'revenue';
 
-        const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-        const data = new Blob([excelBuffer], { type: 'application/octet-stream' });
-        saveAs(data, `GeneralLedger_${selectedYear}.xlsx`);
-    };
+        accounts.forEach(a => {
+            if (isBSAccount(a)) {
+                accountBalancesKimatsu[a.code] = accountBalancesKishu[a.code] + accountBalancesCurrent[a.code];
+            } else {
+                accountBalancesKimatsu[a.code] = accountBalancesCurrent[a.code];
+            }
+        });
 
-    const handleDownloadPL = () => {
-        const wb = XLSX.utils.book_new();
-        const wsData: any[][] = [];
+        const getFilteredAccounts = (reportType: 'PL' | 'BS', accNormalBal: 'debit' | 'credit') => {
+            return accounts
+                .filter(a => (reportType === 'PL' ? isPLAccount(a) : isBSAccount(a)) && (accNormalBal === 'debit' ? isDebitAccount(a) : isCreditAccount(a)))
+                .map(a => {
+                    const isDebit = isDebitAccount(a);
 
-        wsData.push(['損益計算書 (P/L)', '', '']);
-        wsData.push(['作成日', dayjs().format('YYYY-MM-DD'), '']);
-        wsData.push(['']);
+                    const rawKishu = accountBalancesKishu[a.code] || 0;
+                    const balanceKishu = isDebit ? rawKishu : -rawKishu;
 
-        if (hasGeneralBiz) {
-            wsData.push(['【一般事業所得】']);
-            wsData.push(['【売上・収入金額】', '', '']);
-            plSales.forEach(a => wsData.push([a.code, a.name, a.balance]));
-            plOtherIncome.forEach(a => wsData.push([a.code, a.name, a.balance]));
-            wsData.push(['', '売上(収入)金額 計', totalSales]);
+                    const rawCurrent = accountBalancesCurrent[a.code] || 0;
+                    const balanceCurrent = isDebit ? rawCurrent : -rawCurrent;
+
+                    const rawKimatsu = accountBalancesKimatsu[a.code] || 0;
+                    const balanceKimatsu = isDebit ? rawKimatsu : -rawKimatsu;
+
+                    const balance = reportType === 'BS' ? balanceKimatsu : balanceCurrent;
+
+                    return { ...a, balance, balanceKishu, balanceKimatsu, balanceCurrent, type: (isDebit ? 'debit' : 'credit') as 'debit' | 'credit', report: reportType as 'PL' | 'BS' };
+                })
+                .filter(a => a.balance !== 0 || (reportType === 'BS' && a.balanceKishu !== 0));
+        };
+
+        const plExpenses = getFilteredAccounts('PL', 'debit');
+        const plIncomes = getFilteredAccounts('PL', 'credit');
+
+        const bsAssets = getFilteredAccounts('BS', 'debit');
+        const bsLiabilities = getFilteredAccounts('BS', 'credit');
+
+        // 売上関係
+        const salesCodes = [500, 501, 580, 581, 583, 590, 5999]; // 一般売上
+        const agrSalesCodes = [5100, 5101, 5102]; // 農業売上
+        const reSalesCodes = [5200, 5201, 5202]; // 不動産売上
+
+        const plSales = plIncomes.filter(a => salesCodes.includes(a.code));
+        const plAgrSales = plIncomes.filter(a => agrSalesCodes.includes(a.code));
+        const plRESales = plIncomes.filter(a => reSalesCodes.includes(a.code));
+        const plOtherIncome = plIncomes.filter(a => !salesCodes.includes(a.code) && !agrSalesCodes.includes(a.code) && !reSalesCodes.includes(a.code) && a.code !== 650 && a.code !== 690);
+
+        // 売上原価 (一般)
+        const kishuAssets = plExpenses.filter(a => a.code === 600 || a.code === 605);
+        const shiireAssets = plExpenses.filter(a => a.code === 610);
+        const kimatsuAssets = accounts.filter(a => a.code === 650 || a.code === 690).map(a => {
+            const bal = accountBalancesCurrent[a.code] || 0;
+            return { ...a, balance: -bal };
+        }).filter(a => a.balance !== 0);
+
+        const sumKishu = kishuAssets.reduce((sum, a) => sum + a.balance, 0);
+        const sumShiire = shiireAssets.reduce((sum, a) => sum + a.balance, 0);
+        const sumKimatsu = kimatsuAssets.reduce((sum, a) => sum + a.balance, 0);
+        const cogs = sumKishu + sumShiire - sumKimatsu;
+
+        // 経費分類
+        const agrExpenseCodes = [8000, 8001, 8002, 8003, 8004, 8005, 8006, 8007, 8008, 8009, 8010];
+        const reExpenseCodes = [9000, 9001, 9002, 9003, 9004];
+
+        const plAgrExpenses = plExpenses.filter(a => agrExpenseCodes.includes(a.code));
+        const plREExpenses = plExpenses.filter(a => reExpenseCodes.includes(a.code));
+        const plTrueExpenses = plExpenses.filter(a =>
+            a.code !== 600 && a.code !== 605 && a.code !== 610 &&
+            a.code !== 6498 && a.code !== 6499 &&
+            !agrExpenseCodes.includes(a.code) &&
+            !reExpenseCodes.includes(a.code)
+        );
+
+        // 一般事業の計算
+        const hasGeneralBiz = plSales.length > 0 || plOtherIncome.length > 0 || plTrueExpenses.length > 0 || cogs !== 0;
+        const totalSales = plSales.reduce((sum, a) => sum + a.balance, 0) + plOtherIncome.reduce((sum, a) => sum + a.balance, 0);
+        const grossProfit = totalSales - cogs;
+        const totalTrueExpense = plTrueExpenses.reduce((sum, a) => sum + a.balance, 0);
+        const generalNetIncome = grossProfit - totalTrueExpense;
+
+        // 農業所得の計算
+        const hasAgrBiz = plAgrSales.length > 0 || plAgrExpenses.length > 0;
+        const totalAgrSales = plAgrSales.reduce((sum, a) => sum + a.balance, 0);
+        const totalAgrExpense = plAgrExpenses.reduce((sum, a) => sum + a.balance, 0);
+        const agrNetIncome = totalAgrSales - totalAgrExpense;
+
+        // 不動産所得の計算
+        const hasREBiz = plRESales.length > 0 || plREExpenses.length > 0;
+        const totalRESales = plRESales.reduce((sum, a) => sum + a.balance, 0);
+        const totalREExpense = plREExpenses.reduce((sum, a) => sum + a.balance, 0);
+        const reNetIncome = totalRESales - totalREExpense;
+
+        const netIncome = generalNetIncome + agrNetIncome + reNetIncome;
+
+        const totalAssets = bsAssets.reduce((sum, a) => sum + a.balance, 0);
+        const totalLiabilities = bsLiabilities.reduce((sum, a) => sum + a.balance, 0);
+
+        // B/S 期首の合計
+        const totalAssetsKishu = bsAssets.reduce((sum, a) => sum + a.balanceKishu, 0);
+        const totalLiabilitiesKishu = bsLiabilities.reduce((sum, a) => sum + a.balanceKishu, 0);
+
+        // 製造原価計算
+        const getBal = (code: number, type: 'debit' | 'credit') => {
+            const bal = accountBalancesCurrent[code] || 0;
+            return type === 'debit' ? bal : -bal;
+        };
+        const mfgMaterialKishu = getBal(5310, 'debit');
+        const mfgMaterialShiire = getBal(5300, 'debit');
+        const mfgMaterialKimatsu = getBal(5320, 'credit');
+        const mfgMaterialCost = mfgMaterialKishu + mfgMaterialShiire - mfgMaterialKimatsu;
+
+        const mfgLaborCost = getBal(5400, 'debit');
+
+        const mfgExpenseCodes = [5500, 5510, 5520, 5530, 5590];
+        const mfgExpensesList = plExpenses.filter(a => mfgExpenseCodes.includes(a.code));
+        const mfgExpensesTotal = mfgExpensesList.reduce((sum, a) => sum + a.balance, 0);
+
+        const mfgTotalCost = mfgMaterialCost + mfgLaborCost + mfgExpensesTotal;
+
+        const mfgWipKishu = getBal(5610, 'debit');
+        const mfgWipKimatsu = getBal(5620, 'credit');
+
+        const mfgCostOfGoodsManufactured = mfgTotalCost + mfgWipKishu - mfgWipKimatsu;
+        const hasMfgBiz = mfgCostOfGoodsManufactured > 0 || mfgTotalCost > 0;
+
+        // --- 月別売上・仕入計算 ---
+        const monthlySales = Array(12).fill(0);
+        const monthlyPurchases = Array(12).fill(0);
+        const allSalesCodes = [...salesCodes, ...agrSalesCodes, ...reSalesCodes];
+        const allPurchaseCodes = [610, 5300, 8000]; // 一般仕入, 製造原材料仕入, 農業種苗等
+
+        transactions.forEach(t => {
+            const monthNum = parseInt(t.date.substring(5, 7), 10);
+            if (monthNum >= 1 && monthNum <= 12) {
+                const idx = monthNum - 1;
+                const salesInT = (t.credits || []).filter(c => allSalesCodes.includes(c.code)).reduce((sum, c) => sum + c.amount, 0);
+                monthlySales[idx] += salesInT;
+
+                const purchasesInT = (t.debits || []).filter(d => allPurchaseCodes.includes(d.code)).reduce((sum, d) => sum + d.amount, 0);
+                monthlyPurchases[idx] += purchasesInT;
+            }
+        });
+
+        // --- 各種内訳・計算書用データ作成 (名前による動的コード抽出) ---
+        const getIdBySubstring = (subStr: string) => accounts.filter(a => a.name.includes(subStr)).map(a => a.code);
+        const getPlExpenseTotal = (codes: number[]) => plExpenses.filter(a => codes.includes(a.code)).reduce((sum, a) => sum + a.balance, 0);
+
+        const salaryCodes = getIdBySubstring("給料").concat(getIdBySubstring("賃金"));
+        const familySalaryCodes = getIdBySubstring("専従者");
+        const badDebtProvisionCodes = getIdBySubstring("貸倒引当金");
+        const rentCodes = getIdBySubstring("地代").concat(getIdBySubstring("家賃")).concat(getIdBySubstring("小作料・賃借料"));
+        const depreciationCodes = getIdBySubstring("減価償却費");
+        const interestCodes = getIdBySubstring("利子割引").concat(getIdBySubstring("借入金利子"));
+        const taxAcctCodes = getIdBySubstring("税理士").concat(getIdBySubstring("弁護士"));
+
+        const salaryTotal = getPlExpenseTotal(salaryCodes);
+        const familySalaryTotal = getPlExpenseTotal(familySalaryCodes);
+        const badDebtProvisionTotal = getPlExpenseTotal(badDebtProvisionCodes);
+        const rentTotal = getPlExpenseTotal(rentCodes);
+        const depreciationTotal = getPlExpenseTotal(depreciationCodes);
+        const interestTotal = getPlExpenseTotal(interestCodes);
+        const taxAcctTotal = getPlExpenseTotal(taxAcctCodes);
+        const blueReturnDeduction = accounts.find(a => a.name.includes("青色申告特別控除")) ? 650000 : 0; // Simplified assumption for deduction value if account exists, normally dynamic based on user entry or max 650000
+
+        const handleDownloadExcel = () => {
+            if (!transactions || !accounts) return;
+
+            // 総勘定元帳の生成 (Excelシートごと、あるいは縦に並べる)
+            // 今回の要件にあるように、「年度ごとに」「UIのような形で一覧化」するため、
+            // ひとつのシートに全科目の元帳データを時系列で並べます。
+
+            const wb = XLSX.utils.book_new();
+            const wsData: any[][] = [];
+
+            wsData.push(['総勘定元帳', '', '', '', '', '', '']);
             wsData.push(['']);
 
-            wsData.push(['【売上原価】', '', '']);
-            wsData.push(['', '期首棚卸高', sumKishu]);
-            wsData.push(['', '仕入金額', sumShiire]);
-            wsData.push(['', '期末棚卸高', -sumKimatsu]);
-            wsData.push(['', '差引原価', cogs]);
+            // 年度ごとにまとめるなら、表示されている取引データの年を取得（ここでは全体を出力）
+            // 各勘定科目ごとにブロックを作成
+            const sortedAccounts = [...accounts].sort((a, b) => a.code - b.code);
+
+            sortedAccounts.forEach(account => {
+                // この科目が関わるトランザクションを抽出
+                const relatedTransactions = transactions.filter(t =>
+                    (t.debits || []).some(d => d.code === account.code) ||
+                    (t.credits || []).some(c => c.code === account.code)
+                );
+
+                if (relatedTransactions.length === 0) return; // 取引なしはスキップ
+
+                // 勘定科目のヘッダー行
+                const accountKishuRaw = accountBalancesKishu[account.code] || 0;
+                const accountKishu = isDebitAccount(account) ? accountKishuRaw : -accountKishuRaw;
+
+                wsData.push([String(account.code), account.name, isDebitAccount(account) ? '借方' : '貸方']);
+                wsData.push(['日付', '仕訳No / 税区分', '科目コード', '相手科目', '金額 (借方)', '金額 (貸方)', '残高']);
+                wsData.push(['', '', '', '摘要', '', '', '']);
+                wsData.push(['', '', '', '前年度繰越', '', '', accountKishu]);
+
+                let currentBalance = accountKishu;
+
+                relatedTransactions.forEach((t, index) => {
+                    const isDebit = (t.debits || []).find(d => d.code === account.code);
+                    const isCredit = (t.credits || []).find(c => c.code === account.code);
+
+                    let debitAmount = isDebit ? isDebit.amount : '';
+                    let creditAmount = isCredit ? isCredit.amount : '';
+
+                    if (isDebit) currentBalance += (isDebitAccount(account) ? isDebit.amount : -isDebit.amount);
+                    if (isCredit) currentBalance += (isCreditAccount(account) ? isCredit.amount : -isCredit.amount);
+
+                    // 相手科目の特定 (複合仕訳の場合は "諸口" とするか、逆側の最初の科目とする)
+                    let oppName = '諸口';
+                    let oppCode = '999';
+                    if (isDebit && (t.credits || []).length === 1) {
+                        oppCode = String(t.credits[0].code);
+                        oppName = accounts.find(a => a.code === t.credits[0].code)?.name || '不明';
+                    } else if (isCredit && (t.debits || []).length === 1) {
+                        oppCode = String(t.debits[0].code);
+                        oppName = accounts.find(a => a.code === t.debits[0].code)?.name || '不明';
+                    }
+
+                    wsData.push([
+                        t.date,
+                        index + 1, // 仕訳No
+                        oppCode,
+                        oppName,
+                        debitAmount,
+                        creditAmount,
+                        currentBalance
+                    ]);
+                    wsData.push([
+                        '', '', '', t.description || '', '', '', ''
+                    ]);
+                });
+
+                wsData.push(['']);
+                wsData.push(['']);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, "元帳");
+
+            const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const data = new Blob([excelBuffer], { type: 'application/octet-stream' });
+            saveAs(data, `GeneralLedger_${selectedYear}.xlsx`);
+        };
+
+        const handleDownloadPL = () => {
+            const wb = XLSX.utils.book_new();
+            const wsData: any[][] = [];
+
+            wsData.push(['損益計算書 (P/L)', '', '']);
+            wsData.push(['作成日', dayjs().format('YYYY-MM-DD'), '']);
             wsData.push(['']);
 
-            wsData.push(['', '差引金額 (粗利)', grossProfit]);
+            if (hasGeneralBiz) {
+                wsData.push(['【一般事業所得】']);
+                wsData.push(['【売上・収入金額】', '', '']);
+                plSales.forEach(a => wsData.push([a.code, a.name, a.balance]));
+                plOtherIncome.forEach(a => wsData.push([a.code, a.name, a.balance]));
+                wsData.push(['', '売上(収入)金額 計', totalSales]);
+                wsData.push(['']);
+
+                wsData.push(['【売上原価】', '', '']);
+                wsData.push(['', '期首棚卸高', sumKishu]);
+                wsData.push(['', '仕入金額', sumShiire]);
+                wsData.push(['', '期末棚卸高', -sumKimatsu]);
+                wsData.push(['', '差引原価', cogs]);
+                wsData.push(['']);
+
+                wsData.push(['', '差引金額 (粗利)', grossProfit]);
+                wsData.push(['']);
+
+                wsData.push(['【経費】', '', '']);
+                plTrueExpenses.forEach(a => wsData.push([a.code, a.name, a.balance]));
+                wsData.push(['', '経費 計', totalTrueExpense]);
+                wsData.push(['']);
+
+                wsData.push(['', '一般事業所得', generalNetIncome]);
+                wsData.push(['']);
+            }
+
+            if (hasAgrBiz) {
+                wsData.push(['【農業所得】']);
+                wsData.push(['【農業等収入金額】', '', '']);
+                plAgrSales.forEach(a => wsData.push([a.code, a.name, a.balance]));
+                wsData.push(['', '農業収入金額 計', totalAgrSales]);
+                wsData.push(['']);
+
+                wsData.push(['【農業等経費】', '', '']);
+                plAgrExpenses.forEach(a => wsData.push([a.code, a.name, a.balance]));
+                wsData.push(['', '農業経費 計', totalAgrExpense]);
+                wsData.push(['']);
+
+                wsData.push(['', '農業所得', agrNetIncome]);
+                wsData.push(['']);
+            }
+
+            if (hasREBiz) {
+                wsData.push(['【不動産所得】']);
+                wsData.push(['【不動産収入金額】', '', '']);
+                plRESales.forEach(a => wsData.push([a.code, a.name, a.balance]));
+                wsData.push(['', '不動産収入金額 計', totalRESales]);
+                wsData.push(['']);
+
+                wsData.push(['【不動産経費】', '', '']);
+                plREExpenses.forEach(a => wsData.push([a.code, a.name, a.balance]));
+                wsData.push(['', '不動産経費 計', totalREExpense]);
+                wsData.push(['']);
+
+                wsData.push(['', '不動産所得', reNetIncome]);
+                wsData.push(['']);
+            }
+
+            wsData.push(['', '【合計】 青色申告控除前所得', netIncome]);
+
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, "損益計算書");
+            const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            saveAs(new Blob([excelBuffer], { type: 'application/octet-stream' }), `PL_${selectedYear}.xlsx`);
+        };
+
+        const handleDownloadBS = () => {
+            const wb = XLSX.utils.book_new();
+            const wsData: any[][] = [];
+
+            wsData.push(['貸借対照表 (B/S)', '', '']);
+            wsData.push(['作成日', dayjs().format('YYYY-MM-DD'), '']);
             wsData.push(['']);
 
-            wsData.push(['【経費】', '', '']);
-            plTrueExpenses.forEach(a => wsData.push([a.code, a.name, a.balance]));
-            wsData.push(['', '経費 計', totalTrueExpense]);
+            wsData.push(['【資産 (借方)】', '', '']);
+            bsAssets.forEach(a => wsData.push([a.code, a.name, a.balance]));
+            wsData.push(['', '資産合計', totalAssets]);
             wsData.push(['']);
 
-            wsData.push(['', '一般事業所得', generalNetIncome]);
-            wsData.push(['']);
-        }
+            wsData.push(['【負債・資本 (貸方)】', '', '']);
+            bsLiabilities.forEach(a => wsData.push([a.code, a.name, a.balance]));
+            wsData.push(['', '青色申告控除前所得', netIncome]);
+            wsData.push(['', '負債・資本合計', totalLiabilities + netIncome]);
 
-        if (hasAgrBiz) {
-            wsData.push(['【農業所得】']);
-            wsData.push(['【農業等収入金額】', '', '']);
-            plAgrSales.forEach(a => wsData.push([a.code, a.name, a.balance]));
-            wsData.push(['', '農業収入金額 計', totalAgrSales]);
-            wsData.push(['']);
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, "貸借対照表");
+            const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            saveAs(new Blob([excelBuffer], { type: 'application/octet-stream' }), `BS_${selectedYear}.xlsx`);
+        };
 
-            wsData.push(['【農業等経費】', '', '']);
-            plAgrExpenses.forEach(a => wsData.push([a.code, a.name, a.balance]));
-            wsData.push(['', '農業経費 計', totalAgrExpense]);
-            wsData.push(['']);
+        const pdfData = {
+            selectedYear,
+            plSales,
+            plOtherIncome,
+            totalSales,
+            sumKishu,
+            sumShiire,
+            sumKimatsu,
+            cogs,
+            grossProfit,
+            plTrueExpenses,
+            totalTrueExpense,
+            generalNetIncome,
+            hasGeneralBiz,
+            hasAgrBiz,
+            plAgrSales,
+            totalAgrSales,
+            plAgrExpenses,
+            totalAgrExpense,
+            agrNetIncome,
+            hasREBiz,
+            plRESales,
+            totalRESales,
+            plREExpenses,
+            totalREExpense,
+            reNetIncome,
+            netIncome,
+            bsAssets,
+            totalAssets,
+            totalAssetsKishu,
+            bsLiabilities,
+            totalLiabilities,
+            totalLiabilitiesKishu,
+            hasMfgBiz,
+            mfgMaterialKishu,
+            mfgMaterialShiire,
+            mfgMaterialKimatsu,
+            mfgMaterialCost,
+            mfgLaborCost,
+            mfgExpensesList,
+            mfgExpensesTotal,
+            mfgTotalCost,
+            mfgWipKishu,
+            mfgWipKimatsu,
+            mfgCostOfGoodsManufactured,
+            monthlySales,
+            monthlyPurchases,
+            salaryTotal,
+            familySalaryTotal,
+            badDebtProvisionTotal,
+            rentTotal,
+            depreciationTotal,
+            interestTotal,
+            taxAcctTotal,
+            blueReturnDeduction,
+            transactions,
+            accounts
+        };
 
-            wsData.push(['', '農業所得', agrNetIncome]);
-            wsData.push(['']);
-        }
+        return (
+            <Box p={{ xs: 1, sm: 2 }} pt={2}>
 
-        if (hasREBiz) {
-            wsData.push(['【不動産所得】']);
-            wsData.push(['【不動産収入金額】', '', '']);
-            plRESales.forEach(a => wsData.push([a.code, a.name, a.balance]));
-            wsData.push(['', '不動産収入金額 計', totalRESales]);
-            wsData.push(['']);
+                <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', mb: 3, px: 1 }}>各種帳簿</Typography>
 
-            wsData.push(['【不動産経費】', '', '']);
-            plREExpenses.forEach(a => wsData.push([a.code, a.name, a.balance]));
-            wsData.push(['', '不動産経費 計', totalREExpense]);
-            wsData.push(['']);
+                <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 4, borderRadius: 2, bgcolor: '#f0f9ff', border: '1px solid', borderColor: '#bae6fd' }}>
+                    <Typography variant="subtitle1" fontWeight="bold" gutterBottom color="#0284c7">データエクスポート</Typography>
+                    <Typography variant="body2" color="text.secondary" mb={2}>
+                        年間の取引データを各種Excel形式でダウンロードできます。確定申告ソフトや税理士への提出に利用可能です。
+                    </Typography>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                        <Button variant="contained" color="primary" startIcon={<DownloadIcon />} onClick={handleDownloadExcel} disableElevation sx={{ borderRadius: 8 }}>
+                            総勘定元帳 (Excel)
+                        </Button>
+                        <Button variant="contained" sx={{ bgcolor: 'white', color: 'primary.main', border: '1px solid', borderColor: 'primary.main', borderRadius: 8, '&:hover': { bgcolor: '#f0fdf4' } }} startIcon={<DownloadIcon />} onClick={handleDownloadPL} disableElevation>
+                            損益計算書 (Excel)
+                        </Button>
+                        <Button variant="contained" sx={{ bgcolor: 'white', color: 'primary.main', border: '1px solid', borderColor: 'primary.main', borderRadius: 8, '&:hover': { bgcolor: '#f0fdf4' } }} startIcon={<DownloadIcon />} onClick={handleDownloadBS} disableElevation>
+                            貸借対照表 (Excel)
+                        </Button>
+                    </Stack>
 
-            wsData.push(['', '不動産所得', reNetIncome]);
-            wsData.push(['']);
-        }
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mt={3}>
+                        <PdfExporter data={pdfData} />
+                        <GlPdfExporter accounts={accounts} transactions={transactions} selectedYear={selectedYear} balancesKishu={accountBalancesKishu} />
+                    </Stack>
+                </Paper>
 
-        wsData.push(['', '【合計】 青色申告控除前所得', netIncome]);
-
-        const ws = XLSX.utils.aoa_to_sheet(wsData);
-        XLSX.utils.book_append_sheet(wb, ws, "損益計算書");
-        const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-        saveAs(new Blob([excelBuffer], { type: 'application/octet-stream' }), `PL_${selectedYear}.xlsx`);
-    };
-
-    const handleDownloadBS = () => {
-        const wb = XLSX.utils.book_new();
-        const wsData: any[][] = [];
-
-        wsData.push(['貸借対照表 (B/S)', '', '']);
-        wsData.push(['作成日', dayjs().format('YYYY-MM-DD'), '']);
-        wsData.push(['']);
-
-        wsData.push(['【資産 (借方)】', '', '']);
-        bsAssets.forEach(a => wsData.push([a.code, a.name, a.balance]));
-        wsData.push(['', '資産合計', totalAssets]);
-        wsData.push(['']);
-
-        wsData.push(['【負債・資本 (貸方)】', '', '']);
-        bsLiabilities.forEach(a => wsData.push([a.code, a.name, a.balance]));
-        wsData.push(['', '青色申告控除前所得', netIncome]);
-        wsData.push(['', '負債・資本合計', totalLiabilities + netIncome]);
-
-        const ws = XLSX.utils.aoa_to_sheet(wsData);
-        XLSX.utils.book_append_sheet(wb, ws, "貸借対照表");
-        const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-        saveAs(new Blob([excelBuffer], { type: 'application/octet-stream' }), `BS_${selectedYear}.xlsx`);
-    };
-
-    const pdfData = {
-        selectedYear,
-        plSales,
-        plOtherIncome,
-        totalSales,
-        sumKishu,
-        sumShiire,
-        sumKimatsu,
-        cogs,
-        grossProfit,
-        plTrueExpenses,
-        totalTrueExpense,
-        generalNetIncome,
-        hasGeneralBiz,
-        hasAgrBiz,
-        plAgrSales,
-        totalAgrSales,
-        plAgrExpenses,
-        totalAgrExpense,
-        agrNetIncome,
-        hasREBiz,
-        plRESales,
-        totalRESales,
-        plREExpenses,
-        totalREExpense,
-        reNetIncome,
-        netIncome,
-        bsAssets,
-        totalAssets,
-        totalAssetsKishu,
-        bsLiabilities,
-        totalLiabilities,
-        totalLiabilitiesKishu,
-        hasMfgBiz,
-        mfgMaterialKishu,
-        mfgMaterialShiire,
-        mfgMaterialKimatsu,
-        mfgMaterialCost,
-        mfgLaborCost,
-        mfgExpensesList,
-        mfgExpensesTotal,
-        mfgTotalCost,
-        mfgWipKishu,
-        mfgWipKimatsu,
-        mfgCostOfGoodsManufactured,
-        monthlySales,
-        monthlyPurchases,
-        salaryTotal,
-        familySalaryTotal,
-        badDebtProvisionTotal,
-        rentTotal,
-        depreciationTotal,
-        interestTotal,
-        taxAcctTotal,
-        blueReturnDeduction,
-        transactions,
-        accounts
-    };
-
-    return (
-        <Box p={{ xs: 1, sm: 2 }} pt={2}>
-            <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', mb: 3, px: 1 }}>各種帳簿</Typography>
-
-            <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 4, borderRadius: 2, bgcolor: '#f0f9ff', border: '1px solid', borderColor: '#bae6fd' }}>
-                <Typography variant="subtitle1" fontWeight="bold" gutterBottom color="#0284c7">データエクスポート</Typography>
-                <Typography variant="body2" color="text.secondary" mb={2}>
-                    年間の取引データを各種Excel形式でダウンロードできます。確定申告ソフトや税理士への提出に利用可能です。
-                </Typography>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                    <Button variant="contained" color="primary" startIcon={<DownloadIcon />} onClick={handleDownloadExcel} disableElevation sx={{ borderRadius: 8 }}>
-                        総勘定元帳 (Excel)
-                    </Button>
-                    <Button variant="contained" sx={{ bgcolor: 'white', color: 'primary.main', border: '1px solid', borderColor: 'primary.main', borderRadius: 8, '&:hover': { bgcolor: '#f0fdf4' } }} startIcon={<DownloadIcon />} onClick={handleDownloadPL} disableElevation>
-                        損益計算書 (Excel)
-                    </Button>
-                    <Button variant="contained" sx={{ bgcolor: 'white', color: 'primary.main', border: '1px solid', borderColor: 'primary.main', borderRadius: 8, '&:hover': { bgcolor: '#f0fdf4' } }} startIcon={<DownloadIcon />} onClick={handleDownloadBS} disableElevation>
-                        貸借対照表 (Excel)
-                    </Button>
-                </Stack>
-
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mt={3}>
-                    <PdfExporter data={pdfData} />
-                    <GlPdfExporter accounts={accounts} transactions={transactions} selectedYear={selectedYear} balancesKishu={accountBalancesKishu} />
-                </Stack>
-            </Paper>
-
-            {hasGeneralBiz && (
-                <>
-                    <Typography variant="h6" mt={4} mb={1} sx={{ fontWeight: 'bold', px: 1 }}>損益計算書 (一般事業)</Typography>
-                    <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
-                        <Box mb={3}>
-                            <Typography variant="subtitle2" color="primary.dark" fontWeight="bold" borderBottom={2} borderColor="primary.main" pb={0.5} mb={2}>売上・収入金額</Typography>
-                            <Stack spacing={1}>
-                                {plSales.map(a => (
-                                    <Box key={a.code} display="flex" justifyContent="space-between" pl={1} py={0.5}>
-                                        <Typography variant="body2" sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', pr: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{a.name}</Typography>
-                                        <Typography variant="body2" fontWeight={500} fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{a.balance.toLocaleString()}</Typography>
-                                    </Box>
-                                ))}
-                                {plOtherIncome.map(a => (
-                                    <Box key={a.code} display="flex" justifyContent="space-between" pl={1} py={0.5}>
-                                        <Typography variant="body2" sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', pr: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{a.name}</Typography>
-                                        <Typography variant="body2" fontWeight={500} fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{a.balance.toLocaleString()}</Typography>
-                                    </Box>
-                                ))}
-                            </Stack>
-                            <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
-                                <Typography variant="body2" fontWeight="bold">売上 (収入) 金額 計</Typography>
-                                <Typography variant="body2" fontWeight="bold">¥{totalSales.toLocaleString()}</Typography>
-                            </Box>
-                        </Box>
-
-                        <Box mb={3}>
-                            <Typography variant="subtitle2" color="primary.dark" fontWeight="bold" borderBottom={2} borderColor="primary.main" pb={0.5} mb={2}>売上原価</Typography>
-                            <Stack spacing={1} pl={1}>
-                                <Box display="flex" justifyContent="space-between" py={0.5}>
-                                    <Typography variant="body2" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>期首棚卸高</Typography>
-                                    <Typography variant="body2" fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{sumKishu.toLocaleString()}</Typography>
+                {hasGeneralBiz && (
+                    <>
+                        <Typography variant="h6" mt={4} mb={1} sx={{ fontWeight: 'bold', px: 1 }}>損益計算書 (一般事業)</Typography>
+                        <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+                            <Box mb={3}>
+                                <Typography variant="subtitle2" color="primary.dark" fontWeight="bold" borderBottom={2} borderColor="primary.main" pb={0.5} mb={2}>売上・収入金額</Typography>
+                                <Stack spacing={1}>
+                                    {plSales.map(a => (
+                                        <Box key={a.code} display="flex" justifyContent="space-between" pl={1} py={0.5}>
+                                            <Typography variant="body2" sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', pr: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{a.name}</Typography>
+                                            <Typography variant="body2" fontWeight={500} fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{a.balance.toLocaleString()}</Typography>
+                                        </Box>
+                                    ))}
+                                    {plOtherIncome.map(a => (
+                                        <Box key={a.code} display="flex" justifyContent="space-between" pl={1} py={0.5}>
+                                            <Typography variant="body2" sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', pr: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{a.name}</Typography>
+                                            <Typography variant="body2" fontWeight={500} fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{a.balance.toLocaleString()}</Typography>
+                                        </Box>
+                                    ))}
+                                </Stack>
+                                <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
+                                    <Typography variant="body2" fontWeight="bold">売上 (収入) 金額 計</Typography>
+                                    <Typography variant="body2" fontWeight="bold">¥{totalSales.toLocaleString()}</Typography>
                                 </Box>
-                                <Box display="flex" justifyContent="space-between" py={0.5}>
-                                    <Typography variant="body2" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>仕入金額</Typography>
-                                    <Typography variant="body2" fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{sumShiire.toLocaleString()}</Typography>
+                            </Box>
+
+                            <Box mb={3}>
+                                <Typography variant="subtitle2" color="primary.dark" fontWeight="bold" borderBottom={2} borderColor="primary.main" pb={0.5} mb={2}>売上原価</Typography>
+                                <Stack spacing={1} pl={1}>
+                                    <Box display="flex" justifyContent="space-between" py={0.5}>
+                                        <Typography variant="body2" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>期首棚卸高</Typography>
+                                        <Typography variant="body2" fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{sumKishu.toLocaleString()}</Typography>
+                                    </Box>
+                                    <Box display="flex" justifyContent="space-between" py={0.5}>
+                                        <Typography variant="body2" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>仕入金額</Typography>
+                                        <Typography variant="body2" fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{sumShiire.toLocaleString()}</Typography>
+                                    </Box>
+                                    <Box display="flex" justifyContent="space-between" py={0.5}>
+                                        <Typography variant="body2" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>期末棚卸高</Typography>
+                                        <Typography variant="body2" color="error.main" fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>▲ ¥{sumKimatsu.toLocaleString()}</Typography>
+                                    </Box>
+                                </Stack>
+                                <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
+                                    <Typography variant="body2" fontWeight="bold">差引原価</Typography>
+                                    <Typography variant="body2" fontWeight="bold" fontFamily="monospace">¥{cogs.toLocaleString()}</Typography>
                                 </Box>
-                                <Box display="flex" justifyContent="space-between" py={0.5}>
-                                    <Typography variant="body2" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>期末棚卸高</Typography>
-                                    <Typography variant="body2" color="error.main" fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>▲ ¥{sumKimatsu.toLocaleString()}</Typography>
+                            </Box>
+
+                            <Box display="flex" justifyContent="space-between" mb={3} p={1.5} bgcolor="#f0fdfa" borderRadius={2}>
+                                <Typography variant="subtitle1" fontWeight="bold" color="primary.dark">差引金額 (粗利)</Typography>
+                                <Typography variant="subtitle1" fontWeight="bold" color="primary.dark">¥{grossProfit.toLocaleString()}</Typography>
+                            </Box>
+
+                            <Box mb={3}>
+                                <Typography variant="subtitle2" color="primary.dark" fontWeight="bold" borderBottom={2} borderColor="primary.main" pb={0.5} mb={2}>経費</Typography>
+                                <Stack spacing={1} pl={1}>
+                                    {plTrueExpenses.map(a => (
+                                        <Box key={a.code} display="flex" justifyContent="space-between" py={0.5}>
+                                            <Typography variant="body2" sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', pr: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{a.name}</Typography>
+                                            <Typography variant="body2" fontWeight={500} fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{a.balance.toLocaleString()}</Typography>
+                                        </Box>
+                                    ))}
+                                </Stack>
+                                <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
+                                    <Typography variant="body2" fontWeight="bold">経費 計</Typography>
+                                    <Typography variant="body2" fontWeight="bold">¥{totalTrueExpense.toLocaleString()}</Typography>
                                 </Box>
-                            </Stack>
-                            <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
-                                <Typography variant="body2" fontWeight="bold">差引原価</Typography>
-                                <Typography variant="body2" fontWeight="bold" fontFamily="monospace">¥{cogs.toLocaleString()}</Typography>
                             </Box>
-                        </Box>
 
-                        <Box display="flex" justifyContent="space-between" mb={3} p={1.5} bgcolor="#f0fdfa" borderRadius={2}>
-                            <Typography variant="subtitle1" fontWeight="bold" color="primary.dark">差引金額 (粗利)</Typography>
-                            <Typography variant="subtitle1" fontWeight="bold" color="primary.dark">¥{grossProfit.toLocaleString()}</Typography>
-                        </Box>
-
-                        <Box mb={3}>
-                            <Typography variant="subtitle2" color="primary.dark" fontWeight="bold" borderBottom={2} borderColor="primary.main" pb={0.5} mb={2}>経費</Typography>
-                            <Stack spacing={1} pl={1}>
-                                {plTrueExpenses.map(a => (
-                                    <Box key={a.code} display="flex" justifyContent="space-between" py={0.5}>
-                                        <Typography variant="body2" sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', pr: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{a.name}</Typography>
-                                        <Typography variant="body2" fontWeight={500} fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{a.balance.toLocaleString()}</Typography>
-                                    </Box>
-                                ))}
-                            </Stack>
-                            <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
-                                <Typography variant="body2" fontWeight="bold">経費 計</Typography>
-                                <Typography variant="body2" fontWeight="bold">¥{totalTrueExpense.toLocaleString()}</Typography>
+                            <Box display="flex" justifyContent="space-between" p={1.5} bgcolor="#f8fafc" borderRadius={2} border={1} borderColor="divider">
+                                <Typography variant="body1" fontWeight="bold" color="text.secondary">一般事業所得</Typography>
+                                <Typography variant="body1" fontWeight="bold" color="text.secondary">¥{generalNetIncome.toLocaleString()}</Typography>
                             </Box>
-                        </Box>
+                        </Paper>
+                    </>
+                )}
 
-                        <Box display="flex" justifyContent="space-between" p={1.5} bgcolor="#f8fafc" borderRadius={2} border={1} borderColor="divider">
-                            <Typography variant="body1" fontWeight="bold" color="text.secondary">一般事業所得</Typography>
-                            <Typography variant="body1" fontWeight="bold" color="text.secondary">¥{generalNetIncome.toLocaleString()}</Typography>
-                        </Box>
-                    </Paper>
-                </>
-            )}
-
-            {hasAgrBiz && (
-                <>
-                    <Typography variant="h6" mt={4} mb={1} sx={{ fontWeight: 'bold', px: 1 }}>損益計算書 (農業)</Typography>
-                    <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
-                        <Box mb={3}>
-                            <Typography variant="subtitle2" color="#059669" fontWeight="bold" borderBottom={2} borderColor="#34d399" pb={0.5} mb={2}>農業・収入金額</Typography>
-                            <Stack spacing={1}>
-                                {plAgrSales.map(a => (
-                                    <Box key={a.code} display="flex" justifyContent="space-between" pl={1} py={0.5}>
-                                        <Typography variant="body2" sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', pr: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{a.name}</Typography>
-                                        <Typography variant="body2" fontWeight={500} fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{a.balance.toLocaleString()}</Typography>
-                                    </Box>
-                                ))}
-                            </Stack>
-                            <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
-                                <Typography variant="body2" fontWeight="bold">農業収入 計</Typography>
-                                <Typography variant="body2" fontWeight="bold">¥{totalAgrSales.toLocaleString()}</Typography>
-                            </Box>
-                        </Box>
-
-                        <Box mb={3}>
-                            <Typography variant="subtitle2" color="#059669" fontWeight="bold" borderBottom={2} borderColor="#34d399" pb={0.5} mb={2}>農業・経費</Typography>
-                            <Stack spacing={1} pl={1}>
-                                {plAgrExpenses.map(a => (
-                                    <Box key={a.code} display="flex" justifyContent="space-between" py={0.5}>
-                                        <Typography variant="body2" sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', pr: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{a.name}</Typography>
-                                        <Typography variant="body2" fontWeight={500} fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{a.balance.toLocaleString()}</Typography>
-                                    </Box>
-                                ))}
-                            </Stack>
-                            <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
-                                <Typography variant="body2" fontWeight="bold">農業経費 計</Typography>
-                                <Typography variant="body2" fontWeight="bold">¥{totalAgrExpense.toLocaleString()}</Typography>
-                            </Box>
-                        </Box>
-
-                        <Box display="flex" justifyContent="space-between" p={1.5} bgcolor="#f8fafc" borderRadius={2} border={1} borderColor="divider">
-                            <Typography variant="body1" fontWeight="bold" color="text.secondary">農業所得</Typography>
-                            <Typography variant="body1" fontWeight="bold" color="text.secondary">¥{agrNetIncome.toLocaleString()}</Typography>
-                        </Box>
-                    </Paper>
-                </>
-            )}
-
-            {hasREBiz && (
-                <>
-                    <Typography variant="h6" mt={4} mb={1} sx={{ fontWeight: 'bold', px: 1 }}>損益計算書 (不動産)</Typography>
-                    <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
-                        <Box mb={3}>
-                            <Typography variant="subtitle2" color="#b45309" fontWeight="bold" borderBottom={2} borderColor="#fbbf24" pb={0.5} mb={2}>不動産・収入金額</Typography>
-                            <Stack spacing={1}>
-                                {plRESales.map(a => (
-                                    <Box key={a.code} display="flex" justifyContent="space-between" pl={1} py={0.5}>
-                                        <Typography variant="body2" sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', pr: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{a.name}</Typography>
-                                        <Typography variant="body2" fontWeight={500} fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{a.balance.toLocaleString()}</Typography>
-                                    </Box>
-                                ))}
-                            </Stack>
-                            <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
-                                <Typography variant="body2" fontWeight="bold">不動産収入 計</Typography>
-                                <Typography variant="body2" fontWeight="bold">¥{totalRESales.toLocaleString()}</Typography>
-                            </Box>
-                        </Box>
-
-                        <Box mb={3}>
-                            <Typography variant="subtitle2" color="#b45309" fontWeight="bold" borderBottom={2} borderColor="#fbbf24" pb={0.5} mb={2}>不動産・経費</Typography>
-                            <Stack spacing={1} pl={1}>
-                                {plREExpenses.map(a => (
-                                    <Box key={a.code} display="flex" justifyContent="space-between" py={0.5}>
-                                        <Typography variant="body2" sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', pr: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{a.name}</Typography>
-                                        <Typography variant="body2" fontWeight={500} fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{a.balance.toLocaleString()}</Typography>
-                                    </Box>
-                                ))}
-                            </Stack>
-                            <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
-                                <Typography variant="body2" fontWeight="bold">不動産経費 計</Typography>
-                                <Typography variant="body2" fontWeight="bold">¥{totalREExpense.toLocaleString()}</Typography>
-                            </Box>
-                        </Box>
-
-                        <Box display="flex" justifyContent="space-between" p={1.5} bgcolor="#f8fafc" borderRadius={2} border={1} borderColor="divider">
-                            <Typography variant="body1" fontWeight="bold" color="text.secondary">不動産所得</Typography>
-                            <Typography variant="body1" fontWeight="bold" color="text.secondary">¥{reNetIncome.toLocaleString()}</Typography>
-                        </Box>
-                    </Paper>
-                </>
-            )}
-
-            <Box mt={3} mb={3} display="flex" justifyContent="space-between" p={2} bgcolor="#eff6ff" borderRadius={2} border={1} borderColor="#bfdbfe">
-                <Typography variant="h6" fontWeight="bold" color="#1e3a8a">総合: 青色申告控除前所得</Typography>
-                <Typography variant="h6" fontWeight="bold" color="#1e3a8a">¥{netIncome.toLocaleString()}</Typography>
-            </Box>
-
-            <Typography variant="h6" mt={5} mb={1} sx={{ fontWeight: 'bold', px: 1 }}>貸借対照表 (B/S)</Typography>
-            <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 4, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
-                <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} gap={4}>
-                    <Box flex={1}>
-                        <Typography variant="subtitle2" color="text.secondary" fontWeight="bold" mb={2} borderBottom={1} borderColor="divider" pb={1}>資産 (借方)</Typography>
-                        <Stack spacing={1}>
-                            {bsAssets.map(a => (
-                                <Box key={a.code} display="flex" justifyContent="space-between" py={0.5}>
-                                    <Typography variant="body2" sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', pr: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{a.name}</Typography>
-                                    <Typography variant="body2" fontWeight={500} fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{a.balance.toLocaleString()}</Typography>
+                {hasAgrBiz && (
+                    <>
+                        <Typography variant="h6" mt={4} mb={1} sx={{ fontWeight: 'bold', px: 1 }}>損益計算書 (農業)</Typography>
+                        <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+                            <Box mb={3}>
+                                <Typography variant="subtitle2" color="#059669" fontWeight="bold" borderBottom={2} borderColor="#34d399" pb={0.5} mb={2}>農業・収入金額</Typography>
+                                <Stack spacing={1}>
+                                    {plAgrSales.map(a => (
+                                        <Box key={a.code} display="flex" justifyContent="space-between" pl={1} py={0.5}>
+                                            <Typography variant="body2" sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', pr: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{a.name}</Typography>
+                                            <Typography variant="body2" fontWeight={500} fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{a.balance.toLocaleString()}</Typography>
+                                        </Box>
+                                    ))}
+                                </Stack>
+                                <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
+                                    <Typography variant="body2" fontWeight="bold">農業収入 計</Typography>
+                                    <Typography variant="body2" fontWeight="bold">¥{totalAgrSales.toLocaleString()}</Typography>
                                 </Box>
-                            ))}
-                        </Stack>
-                        <Divider sx={{ my: 2 }} />
-                        <Box display="flex" justifyContent="space-between" mt={1}>
-                            <Typography variant="body2" fontWeight="bold">資産合計</Typography>
-                            <Typography variant="body2" fontWeight="bold">¥{totalAssets.toLocaleString()}</Typography>
-                        </Box>
-                    </Box>
-                    <Box flex={1}>
-                        <Typography variant="subtitle2" color="text.secondary" fontWeight="bold" mb={2} borderBottom={1} borderColor="divider" pb={1}>負債・資本 (貸方)</Typography>
-                        <Stack spacing={1}>
-                            {bsLiabilities.map(a => (
-                                <Box key={a.code} display="flex" justifyContent="space-between" py={0.5}>
-                                    <Typography variant="body2" sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', pr: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{a.name}</Typography>
-                                    <Typography variant="body2" fontWeight={500} fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{a.balance.toLocaleString()}</Typography>
+                            </Box>
+
+                            <Box mb={3}>
+                                <Typography variant="subtitle2" color="#059669" fontWeight="bold" borderBottom={2} borderColor="#34d399" pb={0.5} mb={2}>農業・経費</Typography>
+                                <Stack spacing={1} pl={1}>
+                                    {plAgrExpenses.map(a => (
+                                        <Box key={a.code} display="flex" justifyContent="space-between" py={0.5}>
+                                            <Typography variant="body2" sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', pr: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{a.name}</Typography>
+                                            <Typography variant="body2" fontWeight={500} fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{a.balance.toLocaleString()}</Typography>
+                                        </Box>
+                                    ))}
+                                </Stack>
+                                <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
+                                    <Typography variant="body2" fontWeight="bold">農業経費 計</Typography>
+                                    <Typography variant="body2" fontWeight="bold">¥{totalAgrExpense.toLocaleString()}</Typography>
                                 </Box>
-                            ))}
-                        </Stack>
-                        <Divider sx={{ my: 2 }} />
-                        <Box display="flex" justifyContent="space-between" mb={1.5}>
-                            <Typography variant="body2" color="primary.main" fontWeight={600}>青色申告控除前所得</Typography>
-                            <Typography variant="body2" color="primary.main" fontWeight={600}>¥{netIncome.toLocaleString()}</Typography>
-                        </Box>
-                        <Box display="flex" justifyContent="space-between" mt={1}>
-                            <Typography variant="body2" fontWeight="bold">負債・資本合計</Typography>
-                            <Typography variant="body2" fontWeight="bold">¥{(totalLiabilities + netIncome).toLocaleString()}</Typography>
-                        </Box>
-                    </Box>
+                            </Box>
+
+                            <Box display="flex" justifyContent="space-between" p={1.5} bgcolor="#f8fafc" borderRadius={2} border={1} borderColor="divider">
+                                <Typography variant="body1" fontWeight="bold" color="text.secondary">農業所得</Typography>
+                                <Typography variant="body1" fontWeight="bold" color="text.secondary">¥{agrNetIncome.toLocaleString()}</Typography>
+                            </Box>
+                        </Paper>
+                    </>
+                )}
+
+                {hasREBiz && (
+                    <>
+                        <Typography variant="h6" mt={4} mb={1} sx={{ fontWeight: 'bold', px: 1 }}>損益計算書 (不動産)</Typography>
+                        <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+                            <Box mb={3}>
+                                <Typography variant="subtitle2" color="#b45309" fontWeight="bold" borderBottom={2} borderColor="#fbbf24" pb={0.5} mb={2}>不動産・収入金額</Typography>
+                                <Stack spacing={1}>
+                                    {plRESales.map(a => (
+                                        <Box key={a.code} display="flex" justifyContent="space-between" pl={1} py={0.5}>
+                                            <Typography variant="body2" sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', pr: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{a.name}</Typography>
+                                            <Typography variant="body2" fontWeight={500} fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{a.balance.toLocaleString()}</Typography>
+                                        </Box>
+                                    ))}
+                                </Stack>
+                                <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
+                                    <Typography variant="body2" fontWeight="bold">不動産収入 計</Typography>
+                                    <Typography variant="body2" fontWeight="bold">¥{totalRESales.toLocaleString()}</Typography>
+                                </Box>
+                            </Box>
+
+                            <Box mb={3}>
+                                <Typography variant="subtitle2" color="#b45309" fontWeight="bold" borderBottom={2} borderColor="#fbbf24" pb={0.5} mb={2}>不動産・経費</Typography>
+                                <Stack spacing={1} pl={1}>
+                                    {plREExpenses.map(a => (
+                                        <Box key={a.code} display="flex" justifyContent="space-between" py={0.5}>
+                                            <Typography variant="body2" sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', pr: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{a.name}</Typography>
+                                            <Typography variant="body2" fontWeight={500} fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{a.balance.toLocaleString()}</Typography>
+                                        </Box>
+                                    ))}
+                                </Stack>
+                                <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
+                                    <Typography variant="body2" fontWeight="bold">不動産経費 計</Typography>
+                                    <Typography variant="body2" fontWeight="bold">¥{totalREExpense.toLocaleString()}</Typography>
+                                </Box>
+                            </Box>
+
+                            <Box display="flex" justifyContent="space-between" p={1.5} bgcolor="#f8fafc" borderRadius={2} border={1} borderColor="divider">
+                                <Typography variant="body1" fontWeight="bold" color="text.secondary">不動産所得</Typography>
+                                <Typography variant="body1" fontWeight="bold" color="text.secondary">¥{reNetIncome.toLocaleString()}</Typography>
+                            </Box>
+                        </Paper>
+                    </>
+                )}
+
+                <Box mt={3} mb={3} display="flex" justifyContent="space-between" p={2} bgcolor="#eff6ff" borderRadius={2} border={1} borderColor="#bfdbfe">
+                    <Typography variant="h6" fontWeight="bold" color="#1e3a8a">総合: 青色申告控除前所得</Typography>
+                    <Typography variant="h6" fontWeight="bold" color="#1e3a8a">¥{netIncome.toLocaleString()}</Typography>
                 </Box>
-            </Paper>
-        </Box>
-    );
+
+                <Typography variant="h6" mt={5} mb={1} sx={{ fontWeight: 'bold', px: 1 }}>貸借対照表 (B/S)</Typography>
+                <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 4, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+                    <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} gap={4}>
+                        <Box flex={1}>
+                            <Typography variant="subtitle2" color="text.secondary" fontWeight="bold" mb={2} borderBottom={1} borderColor="divider" pb={1}>資産 (借方)</Typography>
+                            <Stack spacing={1}>
+                                {bsAssets.map(a => (
+                                    <Box key={a.code} display="flex" justifyContent="space-between" py={0.5}>
+                                        <Typography variant="body2" sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', pr: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{a.name}</Typography>
+                                        <Typography variant="body2" fontWeight={500} fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{a.balance.toLocaleString()}</Typography>
+                                    </Box>
+                                ))}
+                            </Stack>
+                            <Divider sx={{ my: 2 }} />
+                            <Box display="flex" justifyContent="space-between" mt={1}>
+                                <Typography variant="body2" fontWeight="bold">資産合計</Typography>
+                                <Typography variant="body2" fontWeight="bold">¥{totalAssets.toLocaleString()}</Typography>
+                            </Box>
+                        </Box>
+                        <Box flex={1}>
+                            <Typography variant="subtitle2" color="text.secondary" fontWeight="bold" mb={2} borderBottom={1} borderColor="divider" pb={1}>負債・資本 (貸方)</Typography>
+                            <Stack spacing={1}>
+                                {bsLiabilities.map(a => (
+                                    <Box key={a.code} display="flex" justifyContent="space-between" py={0.5}>
+                                        <Typography variant="body2" sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', pr: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{a.name}</Typography>
+                                        <Typography variant="body2" fontWeight={500} fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{a.balance.toLocaleString()}</Typography>
+                                    </Box>
+                                ))}
+                            </Stack>
+                            <Divider sx={{ my: 2 }} />
+                            <Box display="flex" justifyContent="space-between" mb={1.5}>
+                                <Typography variant="body2" color="primary.main" fontWeight={600}>青色申告控除前所得</Typography>
+                                <Typography variant="body2" color="primary.main" fontWeight={600}>¥{netIncome.toLocaleString()}</Typography>
+                            </Box>
+                            <Box display="flex" justifyContent="space-between" mt={1}>
+                                <Typography variant="body2" fontWeight="bold">負債・資本合計</Typography>
+                                <Typography variant="body2" fontWeight="bold">¥{(totalLiabilities + netIncome).toLocaleString()}</Typography>
+                            </Box>
+                        </Box>
+                    </Box>
+                </Paper>
+            </Box>
+        );
+    } catch (e: any) {
+        return <Box p={3}><Typography color="error">CRASH DETECTED: {e.message}</Typography></Box>;
+    }
 }

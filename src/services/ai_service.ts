@@ -18,7 +18,7 @@ const TYPE_TRANSLATION: Record<string, string> = {
 };
 
 async function buildHistoryContext(): Promise<string> {
-    const recentJournals = await db.journals.orderBy('createdAt').reverse().limit(30).toArray();
+    const recentJournals = await db.journals.orderBy('date').reverse().limit(30).toArray();
     if (recentJournals.length === 0) return "過去の仕訳履歴がありません。";
 
     const jIds = recentJournals.map(j => j.id);
@@ -41,7 +41,7 @@ export async function analyzeReceipt(base64Image: string, mimeType: string): Pro
 
     // Fetch accounts to build context
     const accounts = await db.accounts.toArray();
-    const contextText = accounts.map(a => `${a.id}: ${a.name} (${TYPE_TRANSLATION[a.type]})`).join('\n');
+    const contextText = accounts.map(a => `${a.code || a.id}: ${a.name} (${TYPE_TRANSLATION[a.type]})`).join('\n');
 
     // Fetch recent transactions for contextual learning
     const historyContext = await buildHistoryContext();

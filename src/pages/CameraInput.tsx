@@ -308,7 +308,7 @@ export default function CameraInput() {
                             {editingResult.debits.map((d, i) => (
                                 <Box key={`deb-${i}`} display="flex" gap={1} alignItems="center" mb={1.5}>
                                     <TextField select size="small" fullWidth label="科目" value={d.code} onChange={(e) => updateLine('debits', i, 'code', Number(e.target.value))}>
-                                        {accounts.map(a => <MenuItem key={a.id} value={a.id}>{a.id}: {a.name}</MenuItem>)}
+                                        {accounts.map(a => <MenuItem key={a.code || a.id} value={a.code || a.id}>{a.code || a.id}: {a.name}</MenuItem>)}
                                     </TextField>
                                     <TextField size="small" type="number" label="金額" value={d.amount || ''} onChange={(e) => updateLine('debits', i, 'amount', Number(e.target.value))} sx={{ width: '120px' }} />
                                     <IconButton sx={{ color: 'error.main', p: 0.5 }} onClick={() => removeLine('debits', i)} disabled={editingResult.debits.length <= 1}>
@@ -327,7 +327,7 @@ export default function CameraInput() {
                             {editingResult.credits.map((c, i) => (
                                 <Box key={`cre-${i}`} display="flex" gap={1} alignItems="center" mb={1.5}>
                                     <TextField select size="small" fullWidth label="科目" value={c.code} onChange={(e) => updateLine('credits', i, 'code', Number(e.target.value))}>
-                                        {accounts.map(a => <MenuItem key={a.id} value={a.id}>{a.id}: {a.name}</MenuItem>)}
+                                        {accounts.map(a => <MenuItem key={a.code || a.id} value={a.code || a.id}>{a.code || a.id}: {a.name}</MenuItem>)}
                                     </TextField>
                                     <TextField size="small" type="number" label="金額" value={c.amount || ''} onChange={(e) => updateLine('credits', i, 'amount', Number(e.target.value))} sx={{ width: '120px' }} />
                                     <IconButton sx={{ color: 'error.main', p: 0.5 }} onClick={() => removeLine('credits', i)} disabled={editingResult.credits.length <= 1}>

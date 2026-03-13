@@ -171,7 +171,7 @@ export default function TransactionEditorDialog({ open, onClose, journalToEdit }
                             onChange={(e) => updateLine('debits', i, 'code', Number(e.target.value))}
                             disabled={isLoadingLines}
                         >
-                            {accounts.map(a => <MenuItem key={a.id} value={a.id}>{a.id}: {a.name}</MenuItem>)}
+                            {accounts.map(a => <MenuItem key={a.code || a.id} value={a.code || a.id}>{a.code || a.id}: {a.name}</MenuItem>)}
                         </TextField>
                         <TextField
                             size="small" type="number" label="金額" value={d.amount || ''}
@@ -199,7 +199,7 @@ export default function TransactionEditorDialog({ open, onClose, journalToEdit }
                             onChange={(e) => updateLine('credits', i, 'code', Number(e.target.value))}
                             disabled={isLoadingLines}
                         >
-                            {accounts.map(a => <MenuItem key={a.id} value={a.id}>{a.id}: {a.name}</MenuItem>)}
+                            {accounts.map(a => <MenuItem key={a.code || a.id} value={a.code || a.id}>{a.code || a.id}: {a.name}</MenuItem>)}
                         </TextField>
                         <TextField
                             size="small" type="number" label="金額" value={c.amount || ''}

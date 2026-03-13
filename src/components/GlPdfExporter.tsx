@@ -122,68 +122,72 @@ export const GlPdfExporter: React.FC<{ accounts: any[], transactions: any[], sel
         }
     };
 
-    return (
-        <React.Fragment>
-            <Button
-                variant="outlined"
-                startIcon={isGenerating ? <CircularProgress size={20} /> : <PictureAsPdfIcon />}
-                onClick={handleGeneratePdf}
-                disabled={isGenerating}
-                sx={{ borderRadius: 8 }}
-            >
-                総勘定元帳PDF
-            </Button>
+    try {
+        return (
+            <React.Fragment>
+                <Button
+                    variant="outlined"
+                    startIcon={isGenerating ? <CircularProgress size={20} /> : <PictureAsPdfIcon />}
+                    onClick={handleGeneratePdf}
+                    disabled={isGenerating}
+                    sx={{ borderRadius: 8 }}
+                >
+                    総勘定元帳PDF
+                </Button>
 
-            <Box id="gl-pdf-wrapper" sx={{ display: 'none', position: 'absolute', top: '-9999px', left: '-9999px' }}>
-                {pages.map((pageData, index) => (
-                    <Box
-                        key={index}
-                        id={`gl-page-${index}`}
-                        sx={{
-                            width: '297mm', // A4 Landscape
-                            height: '210mm',
-                            padding: '20mm',
-                            bgcolor: 'white',
-                            color: 'black',
-                            fontFamily: '"MS Mincho", serif',
-                            boxSizing: 'border-box'
-                        }}
-                    >
-                        <Box display="flex" justifyContent="space-between" mb={2}>
-                            <Typography variant="h5" fontWeight="bold">総勘定元帳 ({selectedYear}年)</Typography>
-                            <Typography variant="h6">
-                                勘定科目: {pageData.account.code} {pageData.account.name} ({pageData.pageIdx}/{pageData.totalPages})
-                            </Typography>
-                        </Box>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid black', fontSize: '12px' }}>
-                            <thead>
-                                <tr style={{ backgroundColor: '#f0f0f0', borderBottom: '2px solid black' }}>
-                                    <th style={{ padding: '6px', borderRight: '1px solid black', width: '10%' }}>日付</th>
-                                    <th style={{ padding: '6px', borderRight: '1px solid black', width: '5%' }}>No.</th>
-                                    <th style={{ padding: '6px', borderRight: '1px solid black', width: '20%' }}>相手科目</th>
-                                    <th style={{ padding: '6px', borderRight: '1px solid black', width: '30%' }}>摘要</th>
-                                    <th style={{ padding: '6px', borderRight: '1px solid black', width: '12%' }}>借方</th>
-                                    <th style={{ padding: '6px', borderRight: '1px solid black', width: '12%' }}>貸方</th>
-                                    <th style={{ padding: '6px', width: '11%' }}>残高</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {pageData.rows.map((r: any, rIdx: number) => (
-                                    <tr key={rIdx} style={{ borderBottom: '1px solid black' }}>
-                                        <td style={{ padding: '6px', borderRight: '1px solid black', textAlign: 'center' }}>{r.date}</td>
-                                        <td style={{ padding: '6px', borderRight: '1px solid black', textAlign: 'center' }}>{r.no}</td>
-                                        <td style={{ padding: '6px', borderRight: '1px solid black' }}>{r.oppName}</td>
-                                        <td style={{ padding: '6px', borderRight: '1px solid black' }}>{r.desc}</td>
-                                        <td style={{ padding: '6px', borderRight: '1px solid black', textAlign: 'right' }}>{r.debitAmount ? r.debitAmount.toLocaleString() : ''}</td>
-                                        <td style={{ padding: '6px', borderRight: '1px solid black', textAlign: 'right' }}>{r.creditAmount ? r.creditAmount.toLocaleString() : ''}</td>
-                                        <td style={{ padding: '6px', textAlign: 'right' }}>{r.currentBalance.toLocaleString()}</td>
+                <Box id="gl-pdf-wrapper" sx={{ display: 'none', position: 'absolute', top: '-9999px', left: '-9999px' }}>
+                    {pages.map((pageData, index) => (
+                        <Box
+                            key={index}
+                            id={`gl-page-${index}`}
+                            sx={{
+                                width: '297mm', // A4 Landscape
+                                height: '210mm',
+                                padding: '20mm',
+                                bgcolor: 'white',
+                                color: 'black',
+                                fontFamily: '"MS Mincho", serif',
+                                boxSizing: 'border-box'
+                            }}
+                        >
+                            <Box display="flex" justifyContent="space-between" mb={2}>
+                                <Typography variant="h5" fontWeight="bold">総勘定元帳 ({selectedYear}年)</Typography>
+                                <Typography variant="h6">
+                                    勘定科目: {pageData.account.code} {pageData.account.name} ({pageData.pageIdx}/{pageData.totalPages})
+                                </Typography>
+                            </Box>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid black', fontSize: '12px' }}>
+                                <thead>
+                                    <tr style={{ backgroundColor: '#f0f0f0', borderBottom: '2px solid black' }}>
+                                        <th style={{ padding: '6px', borderRight: '1px solid black', width: '10%' }}>日付</th>
+                                        <th style={{ padding: '6px', borderRight: '1px solid black', width: '5%' }}>No.</th>
+                                        <th style={{ padding: '6px', borderRight: '1px solid black', width: '20%' }}>相手科目</th>
+                                        <th style={{ padding: '6px', borderRight: '1px solid black', width: '30%' }}>摘要</th>
+                                        <th style={{ padding: '6px', borderRight: '1px solid black', width: '12%' }}>借方</th>
+                                        <th style={{ padding: '6px', borderRight: '1px solid black', width: '12%' }}>貸方</th>
+                                        <th style={{ padding: '6px', width: '11%' }}>残高</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </Box>
-                ))}
-            </Box>
-        </React.Fragment>
-    );
+                                </thead>
+                                <tbody>
+                                    {pageData.rows.map((r: any, rIdx: number) => (
+                                        <tr key={rIdx} style={{ borderBottom: '1px solid black' }}>
+                                            <td style={{ padding: '6px', borderRight: '1px solid black', textAlign: 'center' }}>{r.date}</td>
+                                            <td style={{ padding: '6px', borderRight: '1px solid black', textAlign: 'center' }}>{r.no}</td>
+                                            <td style={{ padding: '6px', borderRight: '1px solid black' }}>{r.oppName}</td>
+                                            <td style={{ padding: '6px', borderRight: '1px solid black' }}>{r.desc}</td>
+                                            <td style={{ padding: '6px', borderRight: '1px solid black', textAlign: 'right' }}>{r.debitAmount ? r.debitAmount.toLocaleString() : ''}</td>
+                                            <td style={{ padding: '6px', borderRight: '1px solid black', textAlign: 'right' }}>{r.creditAmount ? r.creditAmount.toLocaleString() : ''}</td>
+                                            <td style={{ padding: '6px', textAlign: 'right' }}>{r.currentBalance.toLocaleString()}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </Box>
+                    ))}
+                </Box>
+            </React.Fragment>
+        );
+    } catch (e: any) {
+        return <Typography color="error">GL PDF Export Error: {e.message}</Typography>;
+    }
 };
