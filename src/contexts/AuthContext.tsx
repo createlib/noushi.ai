@@ -47,28 +47,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         console.log("🔥 Extracted membershipRank:", data.membershipRank);
 
                         // Sync API keys to local DB if available
-                        if (data.geminiApiKey !== undefined || data.aiModel !== undefined || data.googleClientId !== undefined || data.useGoogleDriveSync !== undefined || data.googleDriveFileId !== undefined) {
+                        if (data.geminiApiKey !== undefined || data.aiModel !== undefined || data.useFirebaseSync !== undefined) {
                             try {
                                 const localSettings = await localDb.settings.get(1);
                                 if (localSettings) {
                                     await localDb.settings.update(1, {
                                         geminiApiKey: data.geminiApiKey !== undefined ? data.geminiApiKey : localSettings.geminiApiKey,
                                         aiModel: data.aiModel !== undefined ? data.aiModel : localSettings.aiModel,
-                                        googleClientId: data.googleClientId !== undefined ? data.googleClientId : localSettings.googleClientId,
-                                        useGoogleDriveSync: data.useGoogleDriveSync !== undefined ? data.useGoogleDriveSync : localSettings.useGoogleDriveSync,
-                                        googleDriveFileId: data.googleDriveFileId !== undefined ? data.googleDriveFileId : localSettings.googleDriveFileId
+                                        useFirebaseSync: data.useFirebaseSync !== undefined ? data.useFirebaseSync : localSettings.useFirebaseSync
                                     });
                                 } else {
                                     await localDb.settings.add({
                                         id: 1,
                                         geminiApiKey: data.geminiApiKey || '',
                                         aiModel: data.aiModel || 'gemini-2.5-flash',
-                                        googleClientId: data.googleClientId || '',
-                                        useGoogleDriveSync: data.useGoogleDriveSync || false,
-                                        googleDriveFileId: data.googleDriveFileId || ''
+                                        useFirebaseSync: data.useFirebaseSync || false
                                     });
                                 }
-                                console.log("🔥 Synced API & Drive settings to IndexedDB.");
+                                console.log("🔥 Synced API & Sync settings to IndexedDB.");
                             } catch (syncErr) {
                                 console.error("Failed to sync settings to local DB", syncErr);
                             }

@@ -1,20 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Box, Typography, TextField, Button, Paper, Alert, Snackbar, MenuItem } from '@mui/material';
+import { Box, Typography, TextField, Button, Paper, Alert, Snackbar, MenuItem, Switch, FormControlLabel } from '@mui/material';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { doc, setDoc } from 'firebase/firestore';
 import { db as firestoreDb, auth } from '../firebase';
 import 'dexie-export-import';
-import { loadGisScript, authenticateWithDrive, setupDriveFile } from '../services/drive_service';
+import { forceUploadSync } from '../services/sync_service';
 
 export default function Settings() {
     const currentSettings = useLiveQuery(() => db.settings.get(1));
     const [apiKey, setApiKey] = useState('');
     const [aiModel, setAiModel] = useState('gemini-2.5-flash');
-    const [directoryName, setDirectoryName] = useState('未設定');
-    const [googleClientId, setGoogleClientId] = useState('');
-    const [useGoogleDriveSync, setUseGoogleDriveSync] = useState(false);
-    const [googleDriveFileId, setGoogleDriveFileId] = useState('');
+    const [useFirebaseSync, setUseFirebaseSync] = useState(false);
 
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [syncError, setSyncError] = useState<string | null>(null);
@@ -23,12 +20,7 @@ export default function Settings() {
         if (currentSettings) {
             setApiKey(currentSettings.geminiApiKey || '');
             if (currentSettings.aiModel) setAiModel(currentSettings.aiModel);
-            if (currentSettings.saveDirectoryHandle) {
-                setDirectoryName(currentSettings.saveDirectoryHandle.name);
-            }
-            if (currentSettings.googleClientId) setGoogleClientId(currentSettings.googleClientId);
-            if (currentSettings.useGoogleDriveSync !== undefined) setUseGoogleDriveSync(currentSettings.useGoogleDriveSync);
-            if (currentSettings.googleDriveFileId) setGoogleDriveFileId(currentSettings.googleDriveFileId);
+            if (currentSettings.useFirebaseSync !== undefined) setUseFirebaseSync(currentSettings.useFirebaseSync);
         }
     }, [currentSettings]);
 
@@ -36,23 +28,32 @@ export default function Settings() {
         try {
             // 1. Save locally to IndexedDB
             if (currentSettings) {
-                await db.settings.update(1, { geminiApiKey: apiKey, aiModel, googleClientId, useGoogleDriveSync, googleDriveFileId });
+                await db.settings.update(1, { geminiApiKey: apiKey, aiModel, useFirebaseSync });
             } else {
-                await db.settings.add({ id: 1, geminiApiKey: apiKey, aiModel, googleClientId, useGoogleDriveSync, googleDriveFileId });
+                await db.settings.add({ id: 1, geminiApiKey: apiKey, aiModel, useFirebaseSync });
             }
 
             // 2. Sync to Firestore if user is logged in
             const currentUser = auth.currentUser;
             if (currentUser) {
                 const docRef = doc(firestoreDb, 'artifacts', 'default-app-id', 'users', currentUser.uid, 'profile', 'data');
-                // Use setDoc with merge: true to update only the these fields without overwriting membershipRank
+                // Use setDoc with merge: true to update only these fields without overwriting membershipRank
                 await setDoc(docRef, {
                     geminiApiKey: apiKey,
                     aiModel,
-                    googleClientId,
-                    useGoogleDriveSync,
-                    googleDriveFileId
+                    useFirebaseSync
                 }, { merge: true });
+
+                // If user enabled sync, try to trigger a force upload or perform sync right now
+                if (useFirebaseSync) {
+                    try {
+                        await forceUploadSync(currentUser.uid);
+                    } catch (e) {
+                        console.error("Firebase Storage Upload failed", e);
+                        setSyncError("設定は保存できましたが、バックアップ同期に失敗しました。");
+                        return; // Don't show success banner
+                    }
+                }
             }
 
             setSaveSuccess(true);
@@ -60,44 +61,6 @@ export default function Settings() {
         } catch (error) {
             console.error("Failed to save settings:", error);
             setSyncError("設定の保存中にエラーが発生しました。");
-        }
-    };
-
-    const handleSelectDirectory = async () => {
-        try {
-            const handle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
-            if (currentSettings) {
-                await db.settings.update(1, { saveDirectoryHandle: handle });
-            } else {
-                await db.settings.add({ id: 1, geminiApiKey: apiKey, aiModel, saveDirectoryHandle: handle });
-            }
-            setDirectoryName(handle.name);
-            setSaveSuccess(true);
-        } catch (e) {
-            console.error('Directory picking failed or cancelled', e);
-        }
-    };
-
-    const handleDriveAuth = async () => {
-        if (!googleClientId) {
-            alert('先にGoogle Client IDを入力し、「設定を保存する」ボタンを押してください。');
-            return;
-        }
-        try {
-            await loadGisScript();
-            const token = await authenticateWithDrive(googleClientId);
-            const fileId = await setupDriveFile(token);
-            setUseGoogleDriveSync(true);
-            setGoogleDriveFileId(fileId);
-
-            if (currentSettings) {
-                await db.settings.update(1, { useGoogleDriveSync: true, googleDriveFileId: fileId });
-            }
-
-            setSaveSuccess(true);
-        } catch (e: any) {
-            console.error(e);
-            setSyncError('Google Drive 認証に失敗しました。');
         }
     };
 
@@ -149,45 +112,28 @@ export default function Settings() {
                     <MenuItem value="gemini-1.0-pro-vision-latest">gemini-1.0-pro-vision-latest</MenuItem>
                 </TextField>
 
-                <Typography variant="subtitle1" gutterBottom sx={{ mt: 4 }}>Google Drive 連携 (仕訳データの同期)</Typography>
+                <Typography variant="subtitle1" gutterBottom sx={{ mt: 4 }}>Firebase Storage 同期 (自動バックアップ)</Typography>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
-                    複数端末で仕訳データを共有したい場合は、Google Cloud Platform で取得した OAuth クライアントID を入力し認証してください。
+                    有効にすると、ログイン中のアカウントに紐付いて仕訳データがクラウド上に暗号化して自動保存・同期されます。
+                    複数端末で同じアカウントにログインすれば、データがリアルタイムに共有されます。
                 </Typography>
 
-                <TextField
-                    label="Google Client ID"
-                    variant="outlined"
-                    fullWidth
-                    margin="normal"
-                    value={googleClientId}
-                    onChange={(e) => setGoogleClientId(e.target.value)}
+                <FormControlLabel
+                    control={
+                        <Switch
+                            checked={useFirebaseSync}
+                            onChange={(e) => setUseFirebaseSync(e.target.checked)}
+                            color="primary"
+                        />
+                    }
+                    label="クラウド自動同期を有効にする"
                 />
 
-                <Box mt={2} mb={4} display="flex" gap={2} alignItems="center">
-                    <Button variant="outlined" color="primary" onClick={handleDriveAuth}>
-                        Google Drive 認証
-                    </Button>
-                    <Typography variant="body2" color={useGoogleDriveSync ? "success.main" : "text.secondary"}>
-                        {useGoogleDriveSync ? "✅ 認証済み・同期有効" : "未認証"}
-                    </Typography>
-                </Box>
-
-                <Box mt={2} mb={4}>
+                <Box mt={4} mb={2}>
                     <Button variant="contained" color="primary" onClick={handleSave} disableElevation>
-                        設定を保存する (端末間同期)
+                        設定を保存する
                     </Button>
                 </Box>
-
-                <Typography variant="subtitle1" gutterBottom sx={{ mt: 4 }}>画像保存フォルダ</Typography>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                    レシート画像をローカルPCの特定のフォルダに保存します（年/月ごとに自動でフォルダ分けされます）。
-                </Typography>
-                <Box mt={1} p={2} bgcolor="grey.100" borderRadius={1} mb={2}>
-                    <Typography variant="body2" fontWeight="bold">現在の保存先: {directoryName}</Typography>
-                </Box>
-                <Button variant="outlined" onClick={handleSelectDirectory}>
-                    保存フォルダを選択する
-                </Button>
             </Paper>
 
             <Paper variant="outlined" sx={{ p: 2 }}>

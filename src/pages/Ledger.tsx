@@ -4,28 +4,34 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Transaction } from '../db/db';
+import { db, type Journal } from '../db/db';
 import TransactionEditorDialog from '../components/TransactionEditorDialog';
 import { useFiscalYear } from '../contexts/FiscalYearContext';
 
 export default function Ledger() {
     const { selectedYear } = useFiscalYear();
-    const allTransactions = useLiveQuery(() => db.transactions.orderBy('date').reverse().toArray());
-    const transactions = allTransactions?.filter(t => t.date.startsWith(String(selectedYear)) && !t.deletedAt);
+
+    const allJournals = useLiveQuery(() => db.journals.orderBy('date').reverse().toArray());
+    const allLines = useLiveQuery(() => db.journal_lines.toArray());
     const accounts = useLiveQuery(() => db.accounts.toArray());
 
-    const [editorOpen, setEditorOpen] = useState(false);
-    const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+    const journals = allJournals?.filter(j => j.date.startsWith(String(selectedYear)) && !j.deletedAt);
 
-    if (!transactions || !accounts) return <Typography p={2}>Loading...</Typography>;
+    const [editorOpen, setEditorOpen] = useState(false);
+    const [editingJournal, setEditingJournal] = useState<Journal | null>(null);
+
+    if (!journals || !allLines || !accounts) return <Typography p={2}>Loading...</Typography>;
 
     const handleDelete = async (id?: string) => {
         if (id && window.confirm('本当に削除しますか？')) {
-            await db.transactions.update(id, {
+            await db.journals.update(id, {
                 deletedAt: Date.now(),
                 updatedAt: Date.now()
             });
-            // Auto sync check could go here if we want immediate deletion sync
+            // Rebuild Ledger
+            const { rebuildLedger, rebuildFiscalPeriods } = await import('../db/init');
+            await rebuildLedger();
+            await rebuildFiscalPeriods();
         }
     };
 
@@ -38,7 +44,7 @@ export default function Ledger() {
                     startIcon={<AddIcon />}
                     size="small"
                     disableElevation
-                    onClick={() => { setEditingTransaction(null); setEditorOpen(true); }}
+                    onClick={() => { setEditingJournal(null); setEditorOpen(true); }}
                 >
                     手動で追加
                 </Button>
@@ -58,18 +64,22 @@ export default function Ledger() {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {transactions.map((t) => {
-                            const debitsArray = t.debits || [];
-                            const creditsArray = t.credits || [];
-                            const debAmount = debitsArray.reduce((sum, d) => sum + d.amount, 0);
-                            const creAmount = creditsArray.reduce((sum, c) => sum + c.amount, 0);
-                            const debNames = debitsArray.map(d => accounts.find(a => a.code === d.code)?.name || '不明').join(',');
-                            const creNames = creditsArray.map(c => accounts.find(a => a.code === c.code)?.name || '不明').join(',');
+                        {journals.map((j) => {
+                            const jLines = allLines.filter(l => l.journal_id === j.id);
+
+                            const debitsArray = jLines.filter(l => l.debit > 0);
+                            const creditsArray = jLines.filter(l => l.credit > 0);
+
+                            const debAmount = debitsArray.reduce((sum, d) => sum + d.debit, 0);
+                            const creAmount = creditsArray.reduce((sum, c) => sum + c.credit, 0);
+
+                            const debNames = debitsArray.map(d => accounts.find(a => a.id === d.account_id)?.name || '不明').join(',');
+                            const creNames = creditsArray.map(c => accounts.find(a => a.id === c.account_id)?.name || '不明').join(',');
 
                             return (
-                                <TableRow key={t.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                                <TableRow key={j.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
                                     <TableCell sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' }, whiteSpace: 'nowrap', verticalAlign: 'top' }}>
-                                        {t.date.substring(5)} {/* MM-DD for mobile */}
+                                        {j.date.substring(5)} {/* MM-DD for mobile */}
                                     </TableCell>
                                     <TableCell sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' }, color: 'primary.dark', fontWeight: 600, maxWidth: '130px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'top' }}>
                                         {debNames}
@@ -84,20 +94,20 @@ export default function Ledger() {
                                         {creAmount.toLocaleString()}
                                     </TableCell>
                                     <TableCell sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' }, color: 'text.secondary', maxWidth: '300px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'top' }}>
-                                        {t.description || ''}
+                                        {j.description || ''}
                                     </TableCell>
                                     <TableCell align="center" sx={{ whiteSpace: 'nowrap', verticalAlign: 'top', py: 0.5 }}>
-                                        <IconButton size="small" aria-label="edit" onClick={() => { setEditingTransaction(t); setEditorOpen(true); }} sx={{ color: 'primary.main', opacity: 0.8, p: { xs: 0.5, sm: 1 } }}>
+                                        <IconButton size="small" aria-label="edit" onClick={() => { setEditingJournal(j); setEditorOpen(true); }} sx={{ color: 'primary.main', opacity: 0.8, p: { xs: 0.5, sm: 1 } }}>
                                             <EditIcon fontSize="small" />
                                         </IconButton>
-                                        <IconButton size="small" aria-label="delete" onClick={() => handleDelete(t.id)} sx={{ color: 'error.main', opacity: 0.8, p: { xs: 0.5, sm: 1 } }}>
+                                        <IconButton size="small" aria-label="delete" onClick={() => handleDelete(j.id)} sx={{ color: 'error.main', opacity: 0.8, p: { xs: 0.5, sm: 1 } }}>
                                             <DeleteIcon fontSize="small" />
                                         </IconButton>
                                     </TableCell>
                                 </TableRow>
                             );
                         })}
-                        {transactions.length === 0 && (
+                        {journals.length === 0 && (
                             <TableRow>
                                 <TableCell colSpan={7} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                                     仕訳データがありません
@@ -111,7 +121,7 @@ export default function Ledger() {
             <TransactionEditorDialog
                 open={editorOpen}
                 onClose={() => setEditorOpen(false)}
-                transactionToEdit={editingTransaction}
+                journalToEdit={editingJournal}
             />
         </Box>
     );

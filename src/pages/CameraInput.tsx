@@ -6,7 +6,8 @@ import dayjs from 'dayjs';
 
 import { db } from '../db/db';
 import { analyzeReceipt, type AIResult } from '../services/ai_service';
-import { loadGisScript, authenticateWithDrive, performSync } from '../services/drive_service';
+import { forceUploadSync } from '../services/sync_service';
+import { auth } from '../firebase';
 
 interface QueueItem {
     id: string;
@@ -46,7 +47,6 @@ export default function CameraInput() {
             };
             reader.readAsDataURL(file);
         }
-        // reset so the same file can be selected again if needed
         event.target.value = '';
     };
 
@@ -75,7 +75,7 @@ export default function CameraInput() {
     const openReview = (item: QueueItem) => {
         if (item.result) {
             setReviewingId(item.id);
-            // 深いコピーを作成して編集用ステートにセット
+            // 深いコピーを作成
             setEditingResult(JSON.parse(JSON.stringify(item.result)));
         }
     };
@@ -97,61 +97,60 @@ export default function CameraInput() {
 
         if (totalDebits !== totalCredits) {
             alert(`借方合計(¥${totalDebits})と貸方合計(¥${totalCredits})が一致しません。`);
+            setIsSaving(false);
             return;
         }
 
-        let localImageId = '';
-
         try {
-            const settings = await db.settings.get(1);
-            if (settings?.saveDirectoryHandle) {
-                const dirHandle = settings.saveDirectoryHandle;
+            const journalId = crypto.randomUUID();
+            const now = Date.now();
 
-                if (await dirHandle.queryPermission({ mode: 'readwrite' }) !== 'granted') {
-                    await dirHandle.requestPermission({ mode: 'readwrite' });
-                }
+            await db.transaction('rw', [db.journals, db.journal_lines], async () => {
+                // Header
+                await db.journals.add({
+                    id: journalId,
+                    date: editingResult.date || dayjs().format('YYYY-MM-DD'),
+                    description: editingResult.description || '',
+                    status: 'posted',
+                    createdAt: now,
+                    updatedAt: now,
+                });
 
-                const dateObj = dayjs(editingResult.date || new Date());
-                const yearFolder = dateObj.format('YYYY');
-                const monthFolder = dateObj.format('MM');
+                // Lines
+                const lines: any[] = [];
+                editingResult.debits.forEach(d => {
+                    lines.push({
+                        id: crypto.randomUUID(),
+                        journal_id: journalId,
+                        account_id: d.code,
+                        debit: d.amount,
+                        credit: 0
+                    });
+                });
+                editingResult.credits.forEach(c => {
+                    lines.push({
+                        id: crypto.randomUUID(),
+                        journal_id: journalId,
+                        account_id: c.code,
+                        debit: 0,
+                        credit: c.amount
+                    });
+                });
 
-                const yearHandle = await dirHandle.getDirectoryHandle(yearFolder, { create: true });
-                const monthHandle = await yearHandle.getDirectoryHandle(monthFolder, { create: true });
-
-                const fileName = `receipt-${Date.now()}.jpg`;
-                const fileHandle = await monthHandle.getFileHandle(fileName, { create: true });
-
-                const writable = await fileHandle.createWritable();
-                const response = await fetch(currentItem.imagePreview);
-                const blob = await response.blob();
-                await writable.write(blob);
-                await writable.close();
-
-                localImageId = `${yearFolder}/${monthFolder}/${fileName}`;
-            }
-        } catch (e) {
-            console.error('Failed to save image locally', e);
-        }
-
-        try {
-            await db.transactions.add({
-                id: crypto.randomUUID(),
-                date: editingResult.date || dayjs().format('YYYY-MM-DD'),
-                debits: [...editingResult.debits],
-                credits: [...editingResult.credits],
-                description: editingResult.description || '',
-                imageId: localImageId || undefined,
-                createdAt: Date.now(),
-                updatedAt: Date.now(),
+                await db.journal_lines.bulkAdd(lines);
             });
 
-            // Auto sync
+            // 再構築
+            const { rebuildLedger, rebuildFiscalPeriods } = await import('../db/init');
+            await rebuildLedger();
+            await rebuildFiscalPeriods();
+
+            // Auto sync to Firebase
             const currentSettings = await db.settings.get(1);
-            if (currentSettings?.useGoogleDriveSync && currentSettings.googleClientId && currentSettings.googleDriveFileId) {
+            const currentUser = auth.currentUser;
+            if (currentSettings?.useFirebaseSync && currentUser) {
                 try {
-                    await loadGisScript();
-                    const token = await authenticateWithDrive(currentSettings.googleClientId, false); // interactive = false
-                    await performSync(token, currentSettings.googleDriveFileId);
+                    await forceUploadSync(currentUser.uid);
                 } catch (e) {
                     console.error('Background sync failed', e);
                 }
@@ -221,25 +220,8 @@ export default function CameraInput() {
                         写真を選択
                     </Button>
                 </Box>
-                {/* カメラ起動用 */}
-                <input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    multiple
-                    ref={cameraInputRef}
-                    style={{ display: 'none' }}
-                    onChange={handleFileChange}
-                />
-                {/* フォルダから選択用 */}
-                <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    ref={galleryInputRef}
-                    style={{ display: 'none' }}
-                    onChange={handleFileChange}
-                />
+                <input type="file" accept="image/*" capture="environment" multiple ref={cameraInputRef} style={{ display: 'none' }} onChange={handleFileChange} />
+                <input type="file" accept="image/*" multiple ref={galleryInputRef} style={{ display: 'none' }} onChange={handleFileChange} />
             </Paper>
 
             {queue.length > 0 && (
@@ -248,12 +230,7 @@ export default function CameraInput() {
                     <Box display="flex" flexDirection="column" gap={2}>
                         {queue.map(item => (
                             <Card key={item.id} elevation={0} sx={{ display: 'flex', border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-                                <CardMedia
-                                    component="img"
-                                    sx={{ width: 100, objectFit: 'cover' }}
-                                    image={item.imagePreview}
-                                    alt="Receipt thumbnail"
-                                />
+                                <CardMedia component="img" sx={{ width: 100, objectFit: 'cover' }} image={item.imagePreview} alt="Receipt thumbnail" />
                                 <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', p: 2, '&:last-child': { pb: 2 } }}>
                                     <Box display="flex" justifyContent="space-between" alignItems="center">
                                         <Box display="flex" alignItems="center" gap={1}>
@@ -303,16 +280,11 @@ export default function CameraInput() {
                 </Box>
             )}
 
-            {/* 確認・編集ダイアログ */}
             <Dialog open={!!reviewingId} onClose={closeReview} maxWidth="md" fullWidth>
                 {editingResult && (
                     <Box display="flex" flexDirection={{ xs: 'column', md: 'row' }}>
                         <Box flex={1} bgcolor="#000" display="flex" justifyContent="center" alignItems="center" minHeight={{ xs: 200, md: 'auto' }}>
-                            <img
-                                src={queue.find(q => q.id === reviewingId)?.imagePreview}
-                                alt="Receipt"
-                                style={{ maxWidth: '100%', maxHeight: '60vh', objectFit: 'contain' }}
-                            />
+                            <img src={queue.find(q => q.id === reviewingId)?.imagePreview} alt="Receipt" style={{ maxWidth: '100%', maxHeight: '60vh', objectFit: 'contain' }} />
                         </Box>
                         <Box flex={1} p={{ xs: 2, sm: 3 }} sx={{ overflowY: 'auto', maxHeight: { xs: 'auto', md: '80vh' } }}>
                             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
@@ -323,8 +295,7 @@ export default function CameraInput() {
                             <TextField
                                 fullWidth margin="dense" label="日付" type="date"
                                 InputLabelProps={{ shrink: true }}
-                                value={editingResult.date}
-                                sx={{ mb: 3 }}
+                                value={editingResult.date} sx={{ mb: 3 }}
                                 onChange={(e) => setEditingResult({ ...editingResult, date: e.target.value })}
                             />
 
@@ -337,7 +308,7 @@ export default function CameraInput() {
                             {editingResult.debits.map((d, i) => (
                                 <Box key={`deb-${i}`} display="flex" gap={1} alignItems="center" mb={1.5}>
                                     <TextField select size="small" fullWidth label="科目" value={d.code} onChange={(e) => updateLine('debits', i, 'code', Number(e.target.value))}>
-                                        {accounts.map(a => <MenuItem key={a.code} value={a.code}>{a.code}: {a.name}</MenuItem>)}
+                                        {accounts.map(a => <MenuItem key={a.id} value={a.id}>{a.id}: {a.name}</MenuItem>)}
                                     </TextField>
                                     <TextField size="small" type="number" label="金額" value={d.amount || ''} onChange={(e) => updateLine('debits', i, 'amount', Number(e.target.value))} sx={{ width: '120px' }} />
                                     <IconButton sx={{ color: 'error.main', p: 0.5 }} onClick={() => removeLine('debits', i)} disabled={editingResult.debits.length <= 1}>
@@ -356,7 +327,7 @@ export default function CameraInput() {
                             {editingResult.credits.map((c, i) => (
                                 <Box key={`cre-${i}`} display="flex" gap={1} alignItems="center" mb={1.5}>
                                     <TextField select size="small" fullWidth label="科目" value={c.code} onChange={(e) => updateLine('credits', i, 'code', Number(e.target.value))}>
-                                        {accounts.map(a => <MenuItem key={a.code} value={a.code}>{a.code}: {a.name}</MenuItem>)}
+                                        {accounts.map(a => <MenuItem key={a.id} value={a.id}>{a.id}: {a.name}</MenuItem>)}
                                     </TextField>
                                     <TextField size="small" type="number" label="金額" value={c.amount || ''} onChange={(e) => updateLine('credits', i, 'amount', Number(e.target.value))} sx={{ width: '120px' }} />
                                     <IconButton sx={{ color: 'error.main', p: 0.5 }} onClick={() => removeLine('credits', i)} disabled={editingResult.credits.length <= 1}>
@@ -368,8 +339,7 @@ export default function CameraInput() {
 
                             <TextField
                                 fullWidth margin="dense" label="摘要 (内容)"
-                                value={editingResult.description}
-                                sx={{ mt: 3, mb: 2 }}
+                                value={editingResult.description} sx={{ mt: 3, mb: 2 }}
                                 onChange={(e) => setEditingResult({ ...editingResult, description: e.target.value })}
                             />
 

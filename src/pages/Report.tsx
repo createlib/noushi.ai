@@ -1,3 +1,4 @@
+import React from 'react';
 import { Box, Typography, Paper, Divider, Button, Stack } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -12,10 +13,26 @@ import { GlPdfExporter } from '../components/GlPdfExporter';
 
 export default function Report() {
     const { selectedYear } = useFiscalYear();
-    const allTransactionsLive = useLiveQuery(() => db.transactions.toArray());
-    const allTransactions = allTransactionsLive?.filter(t => !t.deletedAt);
-    const transactions = allTransactions?.filter(t => t.date.startsWith(String(selectedYear)));
+
+    const allJournalsLive = useLiveQuery(() => db.journals.orderBy('date').toArray());
+    const allLinesLive = useLiveQuery(() => db.journal_lines.toArray());
     const accounts = useLiveQuery(() => db.accounts.toArray());
+
+    const allTransactions = React.useMemo(() => {
+        if (!allJournalsLive || !allLinesLive) return null;
+        return allJournalsLive.filter(j => !j.deletedAt).map(j => {
+            const lines = allLinesLive.filter(l => l.journal_id === j.id);
+            return {
+                id: j.id,
+                date: j.date,
+                description: j.description,
+                debits: lines.filter(l => l.debit > 0).map(l => ({ code: l.account_id, amount: l.debit })),
+                credits: lines.filter(l => l.credit > 0).map(l => ({ code: l.account_id, amount: l.credit }))
+            };
+        });
+    }, [allJournalsLive, allLinesLive]);
+
+    const transactions = allTransactions?.filter(t => t.date.startsWith(String(selectedYear)));
 
     if (!allTransactions || !accounts || !transactions) return <Typography p={2}>Loading...</Typography>;
 
@@ -59,7 +76,7 @@ export default function Report() {
         let deltaCapital = 0;
 
         accounts.forEach(a => {
-            if (a.report === 'PL') {
+            if (isPLAccount(a)) {
                 deltaCapital += accountBalancesKishu[a.code];
                 accountBalancesKishu[a.code] = 0;
             } else if (a.code === 210 || a.name.includes("事業主貸")) {
@@ -79,19 +96,24 @@ export default function Report() {
         }
     });
 
+    const isPLAccount = (a: any) => a.type === 'revenue' || a.type === 'expense';
+    const isBSAccount = (a: any) => a.type === 'asset' || a.type === 'liability' || a.type === 'equity';
+    const isDebitAccount = (a: any) => a.type === 'asset' || a.type === 'expense';
+    const isCreditAccount = (a: any) => a.type === 'liability' || a.type === 'equity' || a.type === 'revenue';
+
     accounts.forEach(a => {
-        if (a.report === 'BS') {
+        if (isBSAccount(a)) {
             accountBalancesKimatsu[a.code] = accountBalancesKishu[a.code] + accountBalancesCurrent[a.code];
         } else {
             accountBalancesKimatsu[a.code] = accountBalancesCurrent[a.code];
         }
     });
 
-    const getFilteredAccounts = (reportType: 'PL' | 'BS', accType: 'debit' | 'credit') => {
+    const getFilteredAccounts = (reportType: 'PL' | 'BS', accNormalBal: 'debit' | 'credit') => {
         return accounts
-            .filter(a => a.report === reportType && a.type === accType)
+            .filter(a => (reportType === 'PL' ? isPLAccount(a) : isBSAccount(a)) && (accNormalBal === 'debit' ? isDebitAccount(a) : isCreditAccount(a)))
             .map(a => {
-                const isDebit = a.type === 'debit';
+                const isDebit = isDebitAccount(a);
 
                 const rawKishu = accountBalancesKishu[a.code] || 0;
                 const balanceKishu = isDebit ? rawKishu : -rawKishu;
@@ -104,7 +126,7 @@ export default function Report() {
 
                 const balance = reportType === 'BS' ? balanceKimatsu : balanceCurrent;
 
-                return { ...a, balance, balanceKishu, balanceKimatsu, balanceCurrent };
+                return { ...a, balance, balanceKishu, balanceKimatsu, balanceCurrent, type: (isDebit ? 'debit' : 'credit') as 'debit' | 'credit', report: reportType as 'PL' | 'BS' };
             })
             .filter(a => a.balance !== 0 || (reportType === 'BS' && a.balanceKishu !== 0));
     };
@@ -270,9 +292,9 @@ export default function Report() {
 
             // 勘定科目のヘッダー行
             const accountKishuRaw = accountBalancesKishu[account.code] || 0;
-            const accountKishu = account.type === 'debit' ? accountKishuRaw : -accountKishuRaw;
+            const accountKishu = isDebitAccount(account) ? accountKishuRaw : -accountKishuRaw;
 
-            wsData.push([String(account.code), account.name, account.type === 'debit' ? '借方' : '貸方']);
+            wsData.push([String(account.code), account.name, isDebitAccount(account) ? '借方' : '貸方']);
             wsData.push(['日付', '仕訳No / 税区分', '科目コード', '相手科目', '金額 (借方)', '金額 (貸方)', '残高']);
             wsData.push(['', '', '', '摘要', '', '', '']);
             wsData.push(['', '', '', '前年度繰越', '', '', accountKishu]);
@@ -286,8 +308,8 @@ export default function Report() {
                 let debitAmount = isDebit ? isDebit.amount : '';
                 let creditAmount = isCredit ? isCredit.amount : '';
 
-                if (isDebit) currentBalance += (account.type === 'debit' ? isDebit.amount : -isDebit.amount);
-                if (isCredit) currentBalance += (account.type === 'credit' ? isCredit.amount : -isCredit.amount);
+                if (isDebit) currentBalance += (isDebitAccount(account) ? isDebit.amount : -isDebit.amount);
+                if (isCredit) currentBalance += (isCreditAccount(account) ? isCredit.amount : -isCredit.amount);
 
                 // 相手科目の特定 (複合仕訳の場合は "諸口" とするか、逆側の最初の科目とする)
                 let oppName = '諸口';

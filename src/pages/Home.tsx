@@ -1,63 +1,56 @@
-import { Box, Typography, Card, CardContent, Paper } from '@mui/material';
+import { Box, Typography, Card, CardContent, Paper, Tooltip, IconButton, CircularProgress } from '@mui/material';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import SyncIcon from '@mui/icons-material/Sync';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import dayjs from 'dayjs';
 import { useFiscalYear } from '../contexts/FiscalYearContext';
 import { useState } from 'react';
-import SyncIcon from '@mui/icons-material/Sync';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import { IconButton, CircularProgress, Tooltip } from '@mui/material';
-import { loadGisScript, authenticateWithDrive, performSync, forceUploadSync } from '../services/drive_service';
+import { forceUploadSync, performSync } from '../services/sync_service';
+import { auth } from '../firebase';
 
 const COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
 
 export default function Home() {
     const { selectedYear } = useFiscalYear();
 
-    const allTransactions = useLiveQuery(
-        () => db.transactions.toArray()
-    );
-
-    const accounts = useLiveQuery(
-        () => db.accounts.toArray()
-    );
-
+    const journals = useLiveQuery(() => db.journals.toArray());
+    const journalLines = useLiveQuery(() => db.journal_lines.toArray());
+    const accounts = useLiveQuery(() => db.accounts.toArray());
     const settings = useLiveQuery(() => db.settings.get(1));
+
     const [isSyncing, setIsSyncing] = useState(false);
     const [isForceUploading, setIsForceUploading] = useState(false);
 
-    if (!allTransactions || !accounts) return <Typography p={2}>Loading...</Typography>;
+    if (!journals || !journalLines || !accounts) return <Typography p={2}>Loading...</Typography>;
 
-    const yearTransactions = allTransactions.filter(t => t.date.startsWith(String(selectedYear)) && !t.deletedAt);
+    // Filter valid journals for the selected year
+    const yearJournals = journals.filter(j => j.date.startsWith(String(selectedYear)) && !j.deletedAt);
+    const yearJournalIds = new Set(yearJournals.map(j => j.id));
+
+    // Get lines for those valid journals
+    const yearLines = journalLines.filter(l => yearJournalIds.has(l.journal_id));
 
     let income = 0;
     let expense = 0;
-
     const yearlyExpenses: Record<string, number> = {};
 
-    yearTransactions.forEach(t => {
-        (t.credits || []).forEach(c => {
-            const creditAccount = accounts.find(a => a.code === c.code);
-            if (creditAccount?.report === 'PL' && creditAccount.type === 'credit') {
-                income += c.amount;
-            }
-        });
+    yearLines.forEach(line => {
+        const acc = accounts.find(a => a.id === line.account_id);
+        if (!acc) return;
 
-        (t.debits || []).forEach(d => {
-            const debitAccount = accounts.find(a => a.code === d.code);
-            if (debitAccount?.report === 'PL' && debitAccount.type === 'debit') {
-                expense += d.amount;
-                // 集計 (経費のみ)
-                if (debitAccount.code >= 700) {
-                    const name = debitAccount.name;
-                    yearlyExpenses[name] = (yearlyExpenses[name] || 0) + d.amount;
-                }
-            }
-        });
+        if (acc.type === 'revenue' && line.credit > 0) {
+            income += line.credit;
+        }
+
+        if (acc.type === 'expense' && line.debit > 0) {
+            expense += line.debit;
+            yearlyExpenses[acc.name] = (yearlyExpenses[acc.name] || 0) + line.debit;
+        }
     });
 
     const expenseData = Object.entries(yearlyExpenses)
@@ -74,12 +67,14 @@ export default function Home() {
     }
 
     const handleSync = async () => {
-        if (!settings?.useGoogleDriveSync || !settings?.googleClientId || !settings?.googleDriveFileId) return;
+        if (!settings?.useFirebaseSync) return;
+        const currentUser = auth.currentUser;
+        if (!currentUser) return alert('同期するにはログインが必要です。');
+
         setIsSyncing(true);
         try {
-            await loadGisScript();
-            const token = await authenticateWithDrive(settings.googleClientId);
-            await performSync(token, settings.googleDriveFileId);
+            await performSync(currentUser.uid);
+            alert('同期が完了しました。');
         } catch (err) {
             console.error('Sync error:', err);
             alert('同期に失敗しました。詳細: ' + (err as Error).message);
@@ -89,15 +84,16 @@ export default function Home() {
     };
 
     const handleForceUpload = async () => {
-        if (!settings?.useGoogleDriveSync || !settings?.googleClientId || !settings?.googleDriveFileId) return;
-        if (!window.confirm('この端末のデータでDrive上のデータを完全に上書きします。よろしいですか？')) return;
+        if (!settings?.useFirebaseSync) return;
+        const currentUser = auth.currentUser;
+        if (!currentUser) return alert('同期するにはログインが必要です。');
+
+        if (!window.confirm('この端末のデータでクラウド上のデータを完全に上書きします。よろしいですか？')) return;
 
         setIsForceUploading(true);
         try {
-            await loadGisScript();
-            const token = await authenticateWithDrive(settings.googleClientId);
-            await forceUploadSync(token, settings.googleDriveFileId);
-            alert('Driveへの上書き保存が完了しました。');
+            await forceUploadSync(currentUser.uid);
+            alert('クラウドへの上書き保存が完了しました。');
         } catch (err) {
             console.error('Force Upload error:', err);
             alert('上書き保存に失敗しました。詳細: ' + (err as Error).message);
@@ -115,14 +111,15 @@ export default function Home() {
                         {selectedYear}年度 の財務サマリーと分析
                     </Typography>
                 </Box>
-                {settings?.useGoogleDriveSync && (
+                {settings?.useFirebaseSync && (
                     <Box display="flex" gap={1}>
-                        <Tooltip title="この端末のデータをDriveへ上書きアップロード">
+
+                        <Tooltip title="この端末のデータをクラウドへ上書きアップロード">
                             <IconButton onClick={handleForceUpload} disabled={isSyncing || isForceUploading} color="warning" sx={{ bgcolor: 'warning.50' }}>
                                 {isForceUploading ? <CircularProgress size={24} /> : <CloudUploadIcon />}
                             </IconButton>
                         </Tooltip>
-                        <Tooltip title="Driveと統合同期 (ダウンロード)">
+                        <Tooltip title="クラウドと統合同期 (ダウンロード＆マージ)">
                             <IconButton onClick={handleSync} disabled={isSyncing || isForceUploading} color="primary" sx={{ bgcolor: 'primary.50' }}>
                                 {isSyncing ? <CircularProgress size={24} /> : <SyncIcon />}
                             </IconButton>
@@ -209,17 +206,21 @@ export default function Home() {
                 <Typography variant="body2" color="primary.main" fontWeight={600} sx={{ cursor: 'pointer' }}>すべて見る</Typography>
             </Box>
             <Paper elevation={0} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', overflow: 'hidden', mx: 1 }}>
-                {yearTransactions.slice(-3).reverse().map((t, idx) => {
-                    const debitsArray = t.debits || [];
-                    const creditsArray = t.credits || [];
-                    const totalAmount = debitsArray.reduce((sum, d) => sum + d.amount, 0);
-                    const debNames = debitsArray.map(d => accounts.find(a => a.code === d.code)?.name || '不明').join(',');
-                    const creNames = creditsArray.map(c => accounts.find(a => a.code === c.code)?.name || '不明').join(',');
+                {yearJournals.slice(-3).reverse().map((j, idx) => {
+                    // Find lines for this journal
+                    const lines = yearLines.filter(l => l.journal_id === j.id);
+                    const debitsArray = lines.filter(l => l.debit > 0);
+                    const creditsArray = lines.filter(l => l.credit > 0);
+
+                    const totalAmount = debitsArray.reduce((sum, d) => sum + d.debit, 0);
+                    const debNames = debitsArray.map(d => accounts.find(a => a.id === d.account_id)?.name || '不明').join(',');
+                    const creNames = creditsArray.map(c => accounts.find(a => a.id === c.account_id)?.name || '不明').join(',');
+
                     return (
-                        <Box key={t.id || idx} p={1.5} borderBottom={idx < yearTransactions.slice(-3).length - 1 ? 1 : 0} borderColor="divider" display="flex" justifyContent="space-between" alignItems="center" sx={{ '&:hover': { bgcolor: '#f8fafc' }, flexWrap: { xs: 'wrap', sm: 'nowrap' }, gap: 1 }}>
+                        <Box key={j.id || idx} p={1.5} borderBottom={idx < yearJournals.slice(-3).length - 1 ? 1 : 0} borderColor="divider" display="flex" justifyContent="space-between" alignItems="center" sx={{ '&:hover': { bgcolor: '#f8fafc' }, flexWrap: { xs: 'wrap', sm: 'nowrap' }, gap: 1 }}>
                             <Box display="flex" alignItems="center" gap={{ xs: 1, sm: 2 }} flex={1} minWidth={0}>
                                 <Typography variant="caption" color="text.secondary" fontWeight={500} flexShrink={0} sx={{ width: 45 }}>
-                                    {dayjs(t.date).format('MM/DD')}
+                                    {dayjs(j.date).format('MM/DD')}
                                 </Typography>
                                 <Typography variant="body2" color="primary.dark" fontWeight={500} noWrap sx={{ maxWidth: '35%' }}>{debNames}</Typography>
                                 <Typography variant="body2" color="text.secondary" flexShrink={0}>→</Typography>
@@ -231,7 +232,7 @@ export default function Home() {
                         </Box>
                     );
                 })}
-                {yearTransactions.length === 0 && (
+                {yearJournals.length === 0 && (
                     <Box p={4} textAlign="center">
                         <Typography color="text.secondary">データがありません</Typography>
                     </Box>

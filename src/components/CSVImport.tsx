@@ -120,15 +120,60 @@ export default function CSVImport() {
         }
 
         try {
-            await db.transactions.add({
-                id: crypto.randomUUID(),
-                date: editingResult.date || dayjs().format('YYYY-MM-DD'),
-                debits: [...editingResult.debits],
-                credits: [...editingResult.credits],
-                description: editingResult.description || '',
-                createdAt: Date.now(),
-                updatedAt: Date.now(),
+            const now = Date.now();
+            const journalId = crypto.randomUUID();
+
+            await db.transaction('rw', [db.journals, db.journal_lines], async () => {
+                await db.journals.add({
+                    id: journalId,
+                    date: editingResult.date || dayjs().format('YYYY-MM-DD'),
+                    description: editingResult.description || '',
+                    status: 'posted',
+                    createdAt: now,
+                    updatedAt: now
+                });
+
+                const newLines: any[] = [];
+                editingResult.debits.forEach(d => {
+                    newLines.push({
+                        id: crypto.randomUUID(),
+                        journal_id: journalId,
+                        account_id: d.code,
+                        debit: d.amount,
+                        credit: 0
+                    });
+                });
+                editingResult.credits.forEach(c => {
+                    newLines.push({
+                        id: crypto.randomUUID(),
+                        journal_id: journalId,
+                        account_id: c.code,
+                        debit: 0,
+                        credit: c.amount
+                    });
+                });
+                await db.journal_lines.bulkAdd(newLines);
             });
+
+            // Rebuild Ledger
+            const { rebuildLedger, rebuildFiscalPeriods } = await import('../db/init');
+            await rebuildLedger();
+            await rebuildFiscalPeriods();
+
+            // Auto sync
+            const currentSettings = await db.settings.get(1);
+            if (currentSettings?.useFirebaseSync) {
+                const { auth } = await import('../firebase');
+                const { forceUploadSync } = await import('../services/sync_service');
+                if (auth.currentUser) {
+                    try {
+                        await forceUploadSync(auth.currentUser.uid);
+                    } catch (e) {
+                        console.error('Background sync failed', e);
+                    }
+                }
+            }
+
             setSuccessMsg('仕訳を登録しました');
             handleRemove(reviewingId);
             closeReview();

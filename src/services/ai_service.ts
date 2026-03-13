@@ -9,6 +9,29 @@ export interface AIResult {
     isPersonalUse?: boolean;
 }
 
+const TYPE_TRANSLATION: Record<string, string> = {
+    'asset': '資産 (借方)',
+    'liability': '負債 (貸方)',
+    'equity': '純資産 (貸方)',
+    'revenue': '収益 (貸方)',
+    'expense': '費用 (借方)'
+};
+
+async function buildHistoryContext(): Promise<string> {
+    const recentJournals = await db.journals.orderBy('createdAt').reverse().limit(30).toArray();
+    if (recentJournals.length === 0) return "過去の仕訳履歴がありません。";
+
+    const jIds = recentJournals.map(j => j.id);
+    const lines = await db.journal_lines.where('journal_id').anyOf(jIds).toArray();
+
+    return recentJournals.map(j => {
+        const jLines = lines.filter(l => l.journal_id === j.id);
+        const debits = jLines.filter(l => l.debit > 0).map(d => `${d.account_id}(¥${d.debit})`).join(', ');
+        const credits = jLines.filter(l => l.credit > 0).map(c => `${c.account_id}(¥${c.credit})`).join(', ');
+        return `- 摘要: "${j.description}", 借方: [${debits}], 貸方: [${credits}]`;
+    }).join('\n');
+}
+
 export async function analyzeReceipt(base64Image: string, mimeType: string): Promise<AIResult | null> {
     // Fetch API key from DB
     const settings = await db.settings.get(1);
@@ -18,23 +41,13 @@ export async function analyzeReceipt(base64Image: string, mimeType: string): Pro
 
     // Fetch accounts to build context
     const accounts = await db.accounts.toArray();
-    const contextText = accounts.map(a => `${a.code}: ${a.name} (${a.type === 'debit' ? '借方' : '貸方'})`).join('\n');
+    const contextText = accounts.map(a => `${a.id}: ${a.name} (${TYPE_TRANSLATION[a.type]})`).join('\n');
 
-    // Fetch recent transactions for contextual learning (Few-shot prompting for user's habits)
-    const recentTransactions = await db.transactions.orderBy('createdAt').reverse().limit(30).toArray();
-    let historyContext = "過去の仕訳履歴がありません。";
-    if (recentTransactions.length > 0) {
-        historyContext = recentTransactions.map(t => {
-            const debits = t.debits.map(d => `${d.code}(¥${d.amount})`).join(', ');
-            const credits = t.credits.map(c => `${c.code}(¥${c.amount})`).join(', ');
-            return `- 摘要: "${t.description}", 借方: [${debits}], 貸方: [${credits}]`;
-        }).join('\n');
-    }
+    // Fetch recent transactions for contextual learning
+    const historyContext = await buildHistoryContext();
 
     const genAI = new GoogleGenerativeAI(settings.geminiApiKey);
 
-    // v1betaで404が出るケースの回避策として、明示的にmodelVersion等のフォールバック設定を行うか、
-    // fetchカスタムオプションでv1へのAPI向き先変更を試みます （SDK経由なので基本は自動ですが）
     const modelName = settings.aiModel || "gemini-2.5-flash";
     const model = genAI.getGenerativeModel({
         model: modelName,
@@ -74,7 +87,7 @@ ${historyContext}
     try {
         const imagePart = {
             inlineData: {
-                data: base64Image.split(',')[1], // remove base64 header like data:image/jpeg;base64,
+                data: base64Image.split(',')[1],
                 mimeType
             },
         };
@@ -84,14 +97,12 @@ ${historyContext}
 
         console.log("Raw LLM Response:", responseText);
 
-        // Try to safely extract JSON (in case model added markdown codeblocks)
         const jsonStrMatch = responseText.match(/```(?:json)?([\s\S]*?)```/);
         const parseTarget = jsonStrMatch ? jsonStrMatch[1].trim() : responseText.trim();
 
         return JSON.parse(parseTarget) as AIResult;
     } catch (error: any) {
         console.error("Gemini API Error:", error);
-        // モデル404エラーの場合は分かりやすいメッセージを返す
         if (error.message && error.message.includes('404')) {
             throw new Error(`指定されたAIモデル(${modelName})へのアクセス権限がないか、モデルが存在しません。設定画面から別のモデルを選択してください。\n詳細: ${error.message}`);
         }
@@ -102,17 +113,9 @@ ${historyContext}
 export async function analyzeCSVRow(csvRow: string): Promise<AIResult | null> {
     const settings = await db.settings.get(1);
     const accounts = await db.accounts.toArray();
-    const contextText = accounts.map(a => `${a.code}: ${a.name} (${a.type === 'debit' ? '借方' : '貸方'})`).join('\n');
+    const contextText = accounts.map(a => `${a.id}: ${a.name} (${TYPE_TRANSLATION[a.type]})`).join('\n');
 
-    const recentTransactions = await db.transactions.orderBy('createdAt').reverse().limit(30).toArray();
-    let historyContext = "過去の仕訳履歴がありません。";
-    if (recentTransactions.length > 0) {
-        historyContext = recentTransactions.map(t => {
-            const debits = t.debits.map(d => `${d.code}(¥${d.amount})`).join(', ');
-            const credits = t.credits.map(c => `${c.code}(¥${c.amount})`).join(', ');
-            return `- 摘要: "${t.description}", 借方: [${debits}], 貸方: [${credits}]`;
-        }).join('\n');
-    }
+    const historyContext = await buildHistoryContext();
 
     const genAI = new GoogleGenerativeAI(settings?.geminiApiKey || '');
     const model = genAI.getGenerativeModel({ model: settings?.aiModel || "gemini-2.5-flash" });
