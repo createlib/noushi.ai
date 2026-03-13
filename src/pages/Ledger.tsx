@@ -49,10 +49,14 @@ export default function Ledger() {
             setTimeout(() => {
                 (async () => {
                     try {
-                        await db.transaction('rw', [db.journals, db.journal_lines], async () => {
-                            await db.journals.bulkDelete(ids);
-                            const linesToDelete = await db.journal_lines.where('journal_id').anyOf(ids).primaryKeys();
-                            await db.journal_lines.bulkDelete(linesToDelete);
+                        // まずヘッダを消す
+                        await db.journals.bulkDelete(ids);
+
+                        // 次に明細を消す (anyOf をやめて、1つずつ安全に高速ループ処理)
+                        await db.transaction('rw', [db.journal_lines], async () => {
+                            for (const jId of ids) {
+                                await db.journal_lines.where('journal_id').equals(jId).delete();
+                            }
                         });
 
                         const currentSettings = await db.settings.get(1);
