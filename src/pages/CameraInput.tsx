@@ -146,13 +146,9 @@ export default function CameraInput() {
             closeReview();
             setIsSaving(false);
 
-            // 背景で元帳再構築と同期を実行
+            // 背景で同期を実行
             setTimeout(async () => {
                 try {
-                    const { rebuildLedger, rebuildFiscalPeriods } = await import('../db/init');
-                    await rebuildLedger();
-                    await rebuildFiscalPeriods();
-
                     const currentSettings = await db.settings.get(1);
                     if (currentSettings?.useFirebaseSync && auth.currentUser) {
                         await forceUploadSync(auth.currentUser.uid);

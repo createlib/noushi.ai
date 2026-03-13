@@ -108,13 +108,9 @@ export default function TransactionEditorDialog({ open, onClose, journalToEdit }
             // UIを即座に解放
             onClose();
 
-            // 背景で元帳再構築と同期を実行
+            // 背景で同期を実行
             setTimeout(async () => {
                 try {
-                    const { rebuildLedger, rebuildFiscalPeriods } = await import('../db/init');
-                    await rebuildLedger();
-                    await rebuildFiscalPeriods();
-
                     const currentSettings = await db.settings.get(1);
                     if (currentSettings?.useFirebaseSync && auth.currentUser) {
                         try {

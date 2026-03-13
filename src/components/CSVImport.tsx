@@ -160,13 +160,9 @@ export default function CSVImport() {
             handleRemove(reviewingId);
             closeReview();
 
-            // 背景処理で重いタスクを実行
+            // 背景処理で同期を実行
             setTimeout(async () => {
                 try {
-                    const { rebuildLedger, rebuildFiscalPeriods } = await import('../db/init');
-                    await rebuildLedger();
-                    await rebuildFiscalPeriods();
-
                     const currentSettings = await db.settings.get(1);
                     if (currentSettings?.useFirebaseSync) {
                         const { auth } = await import('../firebase');
