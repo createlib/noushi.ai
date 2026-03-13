@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Box, Typography, Paper, IconButton, Button, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Checkbox } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
@@ -21,6 +21,20 @@ export default function Ledger() {
     const [editorOpen, setEditorOpen] = useState(false);
     const [editingJournal, setEditingJournal] = useState<Journal | null>(null);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+    const linesByJournalId = useMemo(() => {
+        if (!allLines) return new Map<string, any[]>();
+        const map = new Map<string, any[]>();
+        for (const line of allLines) {
+            let list = map.get(line.journal_id);
+            if (!list) {
+                list = [];
+                map.set(line.journal_id, list);
+            }
+            list.push(line);
+        }
+        return map;
+    }, [allLines]);
 
     if (!journals || !allLines || !accounts) return <Typography p={2}>Loading...</Typography>;
 
@@ -113,7 +127,7 @@ export default function Ledger() {
                     </TableHead>
                     <TableBody>
                         {journals.map((j) => {
-                            const jLines = allLines.filter(l => l.journal_id === j.id);
+                            const jLines = linesByJournalId.get(j.id) || [];
 
                             const debitsArray = jLines.filter(l => l.debit > 0);
                             const creditsArray = jLines.filter(l => l.credit > 0);

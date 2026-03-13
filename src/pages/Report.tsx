@@ -20,8 +20,19 @@ export default function Report() {
 
     const allTransactions = React.useMemo(() => {
         if (!allJournalsLive || !allLinesLive) return null;
+
+        const linesByJournalId = new Map<string, any[]>();
+        for (const line of allLinesLive) {
+            let list = linesByJournalId.get(line.journal_id);
+            if (!list) {
+                list = [];
+                linesByJournalId.set(line.journal_id, list);
+            }
+            list.push(line);
+        }
+
         return allJournalsLive.filter(j => !j.deletedAt).map(j => {
-            const lines = allLinesLive.filter(l => l.journal_id === j.id);
+            const lines = linesByJournalId.get(j.id) || [];
             return {
                 id: j.id,
                 date: j.date,
