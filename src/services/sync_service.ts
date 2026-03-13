@@ -25,9 +25,16 @@ export async function forceUploadSync(uid: string): Promise<void> {
     };
 
     const storageRef = ref(storage, `accounting-backups/${uid}/database_backup.json`);
-    await uploadString(storageRef, JSON.stringify(payload), 'raw', {
-        contentType: 'application/json'
-    });
+    try {
+        await uploadString(storageRef, JSON.stringify(payload), 'raw', {
+            contentType: 'application/json'
+        });
+    } catch (e: any) {
+        if (e.code === 'storage/unauthorized') {
+            throw new Error('Firebase Storageの権限エラーです。Storageルールに accounting-backups フォルダへのアクセス許可を追加してください。');
+        }
+        throw e;
+    }
 }
 
 /**
@@ -48,6 +55,9 @@ export async function performSync(uid: string): Promise<void> {
             remoteData = await resp.json();
         }
     } catch (e: any) {
+        if (e.code === 'storage/unauthorized') {
+            throw new Error('Firebase Storageの権限エラーです。Storageルールに accounting-backups フォルダへのアクセス・読み取り許可を追加してください。');
+        }
         console.log("No remote backup found. Assuming first-time sync:", e);
     }
 

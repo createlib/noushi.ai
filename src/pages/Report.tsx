@@ -61,6 +61,11 @@ export default function Report() {
         return <Box p={3}><Typography color="error">Error in Report rendering: {renderError}</Typography></Box>;
     }
 
+    const isPLAccount = (a: any) => a.type === 'revenue' || a.type === 'expense';
+    const isBSAccount = (a: any) => a.type === 'asset' || a.type === 'liability' || a.type === 'equity';
+    const isDebitAccount = (a: any) => a.type === 'asset' || a.type === 'expense';
+    const isCreditAccount = (a: any) => a.type === 'liability' || a.type === 'equity' || a.type === 'revenue';
+
     try {
         const pastTransactionsByYear: Record<string, any[]> = {};
 
@@ -114,10 +119,7 @@ export default function Report() {
             }
         });
 
-        const isPLAccount = (a: any) => a.type === 'revenue' || a.type === 'expense';
-        const isBSAccount = (a: any) => a.type === 'asset' || a.type === 'liability' || a.type === 'equity';
-        const isDebitAccount = (a: any) => a.type === 'asset' || a.type === 'expense';
-        const isCreditAccount = (a: any) => a.type === 'liability' || a.type === 'equity' || a.type === 'revenue';
+
 
         accounts.forEach(a => {
             if (isBSAccount(a)) {
