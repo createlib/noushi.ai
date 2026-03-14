@@ -614,20 +614,20 @@ export default function Report() {
                     <Typography variant="body2" color="text.secondary" mb={2}>
                         年間の取引データを各種Excel形式でダウンロードできます。確定申告ソフトや税理士への提出に利用可能です。
                     </Typography>
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                        <Button variant="contained" color="secondary" startIcon={<DownloadIcon />} onClick={handleDownloadJournalExcel} disableElevation sx={{ borderRadius: 8 }}>
+                    <Box display="grid" gridTemplateColumns={{ xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }} gap={2}>
+                        <Button fullWidth variant="contained" color="secondary" startIcon={<DownloadIcon />} onClick={handleDownloadJournalExcel} disableElevation sx={{ borderRadius: 8, height: '100%' }}>
                             仕訳帳 (Excel)
                         </Button>
-                        <Button variant="contained" color="primary" startIcon={<DownloadIcon />} onClick={handleDownloadExcel} disableElevation sx={{ borderRadius: 8 }}>
+                        <Button fullWidth variant="contained" color="primary" startIcon={<DownloadIcon />} onClick={handleDownloadExcel} disableElevation sx={{ borderRadius: 8, height: '100%' }}>
                             総勘定元帳 (Excel)
                         </Button>
-                        <Button variant="contained" sx={{ bgcolor: 'white', color: 'primary.main', border: '1px solid', borderColor: 'primary.main', borderRadius: 8, '&:hover': { bgcolor: '#f0fdf4' } }} startIcon={<DownloadIcon />} onClick={handleDownloadPL} disableElevation>
+                        <Button fullWidth variant="contained" sx={{ bgcolor: 'white', color: 'primary.main', border: '1px solid', borderColor: 'primary.main', borderRadius: 8, '&:hover': { bgcolor: '#f0fdf4' }, height: '100%' }} startIcon={<DownloadIcon />} onClick={handleDownloadPL} disableElevation>
                             損益計算書 (Excel)
                         </Button>
-                        <Button variant="contained" sx={{ bgcolor: 'white', color: 'primary.main', border: '1px solid', borderColor: 'primary.main', borderRadius: 8, '&:hover': { bgcolor: '#f0fdf4' } }} startIcon={<DownloadIcon />} onClick={handleDownloadBS} disableElevation>
+                        <Button fullWidth variant="contained" sx={{ bgcolor: 'white', color: 'primary.main', border: '1px solid', borderColor: 'primary.main', borderRadius: 8, '&:hover': { bgcolor: '#f0fdf4' }, height: '100%' }} startIcon={<DownloadIcon />} onClick={handleDownloadBS} disableElevation>
                             貸借対照表 (Excel)
                         </Button>
-                    </Stack>
+                    </Box>
 
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mt={3}>
                         <Box flex={1}>
@@ -644,74 +644,80 @@ export default function Report() {
                     <>
                         <Typography variant="h6" mt={4} mb={1} sx={{ fontWeight: 'bold', px: 1 }}>損益計算書 (一般事業)</Typography>
                         <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
-                            <Box mb={3}>
-                                <Typography variant="subtitle2" color="primary.dark" fontWeight="bold" borderBottom={2} borderColor="primary.main" pb={0.5} mb={2}>売上・収入金額</Typography>
-                                <Stack spacing={1}>
-                                    {plSales.map(a => (
-                                        <Box key={a.code} display="flex" justifyContent="space-between" pl={1} py={0.5}>
-                                            <Typography variant="body2" sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', pr: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{a.name}</Typography>
-                                            <Typography variant="body2" fontWeight={500} fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{a.balance.toLocaleString()}</Typography>
+                            <Box display="flex" flexDirection={{ xs: 'column', md: 'row' }} gap={4}>
+                                <Box flex={1}>
+                                    <Box mb={3}>
+                                        <Typography variant="subtitle2" color="primary.dark" fontWeight="bold" borderBottom={2} borderColor="primary.main" pb={0.5} mb={2}>売上・収入金額</Typography>
+                                        <Stack spacing={1}>
+                                            {plSales.map(a => (
+                                                <Box key={a.code} display="flex" justifyContent="space-between" pl={1} py={0.5}>
+                                                    <Typography variant="body2" sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', pr: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{a.name}</Typography>
+                                                    <Typography variant="body2" fontWeight={500} fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{a.balance.toLocaleString()}</Typography>
+                                                </Box>
+                                            ))}
+                                            {plOtherIncome.map(a => (
+                                                <Box key={a.code} display="flex" justifyContent="space-between" pl={1} py={0.5}>
+                                                    <Typography variant="body2" sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', pr: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{a.name}</Typography>
+                                                    <Typography variant="body2" fontWeight={500} fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{a.balance.toLocaleString()}</Typography>
+                                                </Box>
+                                            ))}
+                                        </Stack>
+                                        <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
+                                            <Typography variant="body2" fontWeight="bold">売上 (収入) 金額 計</Typography>
+                                            <Typography variant="body2" fontWeight="bold">¥{totalSales.toLocaleString()}</Typography>
                                         </Box>
-                                    ))}
-                                    {plOtherIncome.map(a => (
-                                        <Box key={a.code} display="flex" justifyContent="space-between" pl={1} py={0.5}>
-                                            <Typography variant="body2" sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', pr: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{a.name}</Typography>
-                                            <Typography variant="body2" fontWeight={500} fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{a.balance.toLocaleString()}</Typography>
+                                    </Box>
+
+                                    <Box mb={3}>
+                                        <Typography variant="subtitle2" color="primary.dark" fontWeight="bold" borderBottom={2} borderColor="primary.main" pb={0.5} mb={2}>売上原価</Typography>
+                                        <Stack spacing={1} pl={1}>
+                                            <Box display="flex" justifyContent="space-between" py={0.5}>
+                                                <Typography variant="body2" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>期首棚卸高</Typography>
+                                                <Typography variant="body2" fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{sumKishu.toLocaleString()}</Typography>
+                                            </Box>
+                                            <Box display="flex" justifyContent="space-between" py={0.5}>
+                                                <Typography variant="body2" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>仕入金額</Typography>
+                                                <Typography variant="body2" fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{sumShiire.toLocaleString()}</Typography>
+                                            </Box>
+                                            <Box display="flex" justifyContent="space-between" py={0.5}>
+                                                <Typography variant="body2" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>期末棚卸高</Typography>
+                                                <Typography variant="body2" color="error.main" fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>▲ ¥{sumKimatsu.toLocaleString()}</Typography>
+                                            </Box>
+                                        </Stack>
+                                        <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
+                                            <Typography variant="body2" fontWeight="bold">差引原価</Typography>
+                                            <Typography variant="body2" fontWeight="bold" fontFamily="monospace">¥{cogs.toLocaleString()}</Typography>
                                         </Box>
-                                    ))}
-                                </Stack>
-                                <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
-                                    <Typography variant="body2" fontWeight="bold">売上 (収入) 金額 計</Typography>
-                                    <Typography variant="body2" fontWeight="bold">¥{totalSales.toLocaleString()}</Typography>
+                                    </Box>
+
+                                    <Box display="flex" justifyContent="space-between" mb={{ xs: 3, md: 0 }} p={1.5} bgcolor="#f0fdfa" borderRadius={2}>
+                                        <Typography variant="subtitle1" fontWeight="bold" color="primary.dark">差引金額 (粗利)</Typography>
+                                        <Typography variant="subtitle1" fontWeight="bold" color="primary.dark">¥{grossProfit.toLocaleString()}</Typography>
+                                    </Box>
                                 </Box>
-                            </Box>
 
-                            <Box mb={3}>
-                                <Typography variant="subtitle2" color="primary.dark" fontWeight="bold" borderBottom={2} borderColor="primary.main" pb={0.5} mb={2}>売上原価</Typography>
-                                <Stack spacing={1} pl={1}>
-                                    <Box display="flex" justifyContent="space-between" py={0.5}>
-                                        <Typography variant="body2" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>期首棚卸高</Typography>
-                                        <Typography variant="body2" fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{sumKishu.toLocaleString()}</Typography>
-                                    </Box>
-                                    <Box display="flex" justifyContent="space-between" py={0.5}>
-                                        <Typography variant="body2" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>仕入金額</Typography>
-                                        <Typography variant="body2" fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{sumShiire.toLocaleString()}</Typography>
-                                    </Box>
-                                    <Box display="flex" justifyContent="space-between" py={0.5}>
-                                        <Typography variant="body2" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>期末棚卸高</Typography>
-                                        <Typography variant="body2" color="error.main" fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>▲ ¥{sumKimatsu.toLocaleString()}</Typography>
-                                    </Box>
-                                </Stack>
-                                <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
-                                    <Typography variant="body2" fontWeight="bold">差引原価</Typography>
-                                    <Typography variant="body2" fontWeight="bold" fontFamily="monospace">¥{cogs.toLocaleString()}</Typography>
-                                </Box>
-                            </Box>
-
-                            <Box display="flex" justifyContent="space-between" mb={3} p={1.5} bgcolor="#f0fdfa" borderRadius={2}>
-                                <Typography variant="subtitle1" fontWeight="bold" color="primary.dark">差引金額 (粗利)</Typography>
-                                <Typography variant="subtitle1" fontWeight="bold" color="primary.dark">¥{grossProfit.toLocaleString()}</Typography>
-                            </Box>
-
-                            <Box mb={3}>
-                                <Typography variant="subtitle2" color="primary.dark" fontWeight="bold" borderBottom={2} borderColor="primary.main" pb={0.5} mb={2}>経費</Typography>
-                                <Stack spacing={1} pl={1}>
-                                    {plTrueExpenses.map(a => (
-                                        <Box key={a.code} display="flex" justifyContent="space-between" py={0.5}>
-                                            <Typography variant="body2" sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', pr: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{a.name}</Typography>
-                                            <Typography variant="body2" fontWeight={500} fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{a.balance.toLocaleString()}</Typography>
+                                <Box flex={1} display="flex" flexDirection="column">
+                                    <Box mb={3} flexGrow={1}>
+                                        <Typography variant="subtitle2" color="primary.dark" fontWeight="bold" borderBottom={2} borderColor="primary.main" pb={0.5} mb={2}>経費</Typography>
+                                        <Stack spacing={1} pl={1}>
+                                            {plTrueExpenses.map(a => (
+                                                <Box key={a.code} display="flex" justifyContent="space-between" py={0.5}>
+                                                    <Typography variant="body2" sx={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', pr: 1, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>{a.name}</Typography>
+                                                    <Typography variant="body2" fontWeight={500} fontFamily="monospace" fontSize={{ xs: '0.8rem', sm: '0.875rem' }}>¥{a.balance.toLocaleString()}</Typography>
+                                                </Box>
+                                            ))}
+                                        </Stack>
+                                        <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
+                                            <Typography variant="body2" fontWeight="bold">経費 計</Typography>
+                                            <Typography variant="body2" fontWeight="bold">¥{totalTrueExpense.toLocaleString()}</Typography>
                                         </Box>
-                                    ))}
-                                </Stack>
-                                <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
-                                    <Typography variant="body2" fontWeight="bold">経費 計</Typography>
-                                    <Typography variant="body2" fontWeight="bold">¥{totalTrueExpense.toLocaleString()}</Typography>
-                                </Box>
-                            </Box>
+                                    </Box>
 
-                            <Box display="flex" justifyContent="space-between" p={1.5} bgcolor="#f8fafc" borderRadius={2} border={1} borderColor="divider">
-                                <Typography variant="body1" fontWeight="bold" color="text.secondary">一般事業所得</Typography>
-                                <Typography variant="body1" fontWeight="bold" color="text.secondary">¥{generalNetIncome.toLocaleString()}</Typography>
+                                    <Box display="flex" justifyContent="space-between" p={1.5} bgcolor="#f8fafc" borderRadius={2} border={1} borderColor="divider" mt="auto">
+                                        <Typography variant="body1" fontWeight="bold" color="text.secondary">一般事業所得</Typography>
+                                        <Typography variant="body1" fontWeight="bold" color="text.secondary">¥{generalNetIncome.toLocaleString()}</Typography>
+                                    </Box>
+                                </Box>
                             </Box>
                         </Paper>
                     </>

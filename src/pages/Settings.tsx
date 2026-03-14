@@ -191,8 +191,8 @@ export default function Settings() {
     };
 
     return (
-        <Box p={2} maxWidth="800px" mx="auto">
-            <Typography variant="h5" gutterBottom fontWeight="bold" mb={3} color="primary.dark">設定パネル</Typography>
+        <Box p={{ xs: 1, sm: 3 }}>
+            <Typography variant="h5" gutterBottom fontWeight="bold" mb={4} color="primary.dark">設定パネル</Typography>
 
             <Accordion expanded={expanded === 'panel1'} onChange={handleAccordionChange('panel1')} variant="outlined" sx={{ mb: 1, borderRadius: '8px !important', '&:before': { display: 'none' } }}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ bgcolor: '#f8fafc', borderRadius: expanded === 'panel1' ? '8px 8px 0 0' : '8px' }}>
