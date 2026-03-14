@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Box, Typography, Button, Paper, TextField, CircularProgress, MenuItem, Snackbar, Alert, IconButton, Card, CardMedia, CardContent, Dialog } from '@mui/material';
+import { Box, Typography, Button, Paper, TextField, CircularProgress, Snackbar, Alert, IconButton, Card, CardMedia, CardContent, Dialog } from '@mui/material';
 import { CameraAlt, UploadFile, AddCircleOutline, RemoveCircleOutline, CheckCircle, ErrorOutline, Close } from '@mui/icons-material';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
@@ -9,6 +9,7 @@ import { type AIResult } from '../services/ai_service';
 import { forceUploadSync } from '../services/sync_service';
 import { auth } from '../firebase';
 import { useAnalysis, type CameraQueueItem } from '../contexts/AnalysisContext';
+import { AccountAutocomplete } from '../components/AccountAutocomplete';
 
 
 export default function CameraInput() {
@@ -73,8 +74,8 @@ export default function CameraInput() {
 
         setIsSaving(true);
 
-        const totalDebits = editingResult.debits.reduce((sum, d) => sum + d.amount, 0);
-        const totalCredits = editingResult.credits.reduce((sum, c) => sum + c.amount, 0);
+        const totalDebits = editingResult.debits.reduce((sum: number, d: { amount: number }) => sum + d.amount, 0);
+        const totalCredits = editingResult.credits.reduce((sum: number, c: { amount: number }) => sum + c.amount, 0);
 
         if (totalDebits !== totalCredits) {
             alert(`借方合計(¥${totalDebits})と貸方合計(¥${totalCredits})が一致しません。`);
@@ -224,7 +225,7 @@ export default function CameraInput() {
                                                     <CheckCircle color="success" fontSize="small" />
                                                     <Typography variant="body2" color="success.main" fontWeight="bold">解析完了</Typography>
                                                     <Typography variant="caption" color="text.secondary" ml={1}>
-                                                        ¥{item.result?.debits.reduce((s, d) => s + d.amount, 0).toLocaleString()}
+                                                        ¥{item.result?.debits.reduce((sum: number, d: { amount: number }) => sum + d.amount, 0).toLocaleString()}
                                                     </Typography>
                                                 </>
                                             )}
@@ -281,14 +282,16 @@ export default function CameraInput() {
                             <Box mb={1.5} p={1.5} bgcolor="#ecfdf5" borderRadius={2} display="flex" justifyContent="space-between" alignItems="center">
                                 <Typography variant="subtitle2" color="#059669" fontWeight="bold">借方 (Debit)</Typography>
                                 <Typography variant="caption" color="#059669" fontWeight="bold">
-                                    計: ¥{editingResult.debits.reduce((sum, d) => sum + d.amount, 0).toLocaleString()}
+                                    計: ¥{editingResult.debits.reduce((sum: number, d: { amount: number }) => sum + d.amount, 0).toLocaleString()}
                                 </Typography>
                             </Box>
-                            {editingResult.debits.map((d, i) => (
+                            {editingResult.debits.map((d: { code: number, amount: number }, i: number) => (
                                 <Box key={`deb-${i}`} display="flex" gap={1} alignItems="center" mb={1.5}>
-                                    <TextField select size="small" fullWidth label="科目" value={d.code} onChange={(e) => updateLine('debits', i, 'code', Number(e.target.value))}>
-                                        {accounts.map(a => <MenuItem key={a.code || a.id} value={a.code || a.id}>{a.code || a.id}: {a.name}</MenuItem>)}
-                                    </TextField>
+                                    <AccountAutocomplete
+                                        accounts={accounts}
+                                        value={d.code}
+                                        onChange={(newCode: number) => updateLine('debits', i, 'code', newCode)}
+                                    />
                                     <TextField size="small" type="number" label="金額" value={d.amount || ''} onChange={(e) => updateLine('debits', i, 'amount', Number(e.target.value))} sx={{ width: '120px' }} />
                                     <IconButton sx={{ color: 'error.main', p: 0.5 }} onClick={() => removeLine('debits', i)} disabled={editingResult.debits.length <= 1}>
                                         <RemoveCircleOutline />
@@ -300,14 +303,16 @@ export default function CameraInput() {
                             <Box mt={1} mb={1.5} p={1.5} bgcolor="#fffbeb" borderRadius={2} display="flex" justifyContent="space-between" alignItems="center">
                                 <Typography variant="subtitle2" color="#b45309" fontWeight="bold">貸方 (Credit)</Typography>
                                 <Typography variant="caption" color="#b45309" fontWeight="bold">
-                                    計: ¥{editingResult.credits.reduce((sum, c) => sum + c.amount, 0).toLocaleString()}
+                                    計: ¥{editingResult.credits.reduce((sum: number, c: { amount: number }) => sum + c.amount, 0).toLocaleString()}
                                 </Typography>
                             </Box>
-                            {editingResult.credits.map((c, i) => (
+                            {editingResult.credits.map((c: { code: number, amount: number }, i: number) => (
                                 <Box key={`cre-${i}`} display="flex" gap={1} alignItems="center" mb={1.5}>
-                                    <TextField select size="small" fullWidth label="科目" value={c.code} onChange={(e) => updateLine('credits', i, 'code', Number(e.target.value))}>
-                                        {accounts.map(a => <MenuItem key={a.code || a.id} value={a.code || a.id}>{a.code || a.id}: {a.name}</MenuItem>)}
-                                    </TextField>
+                                    <AccountAutocomplete
+                                        accounts={accounts}
+                                        value={c.code}
+                                        onChange={(newCode: number) => updateLine('credits', i, 'code', newCode)}
+                                    />
                                     <TextField size="small" type="number" label="金額" value={c.amount || ''} onChange={(e) => updateLine('credits', i, 'amount', Number(e.target.value))} sx={{ width: '120px' }} />
                                     <IconButton sx={{ color: 'error.main', p: 0.5 }} onClick={() => removeLine('credits', i)} disabled={editingResult.credits.length <= 1}>
                                         <RemoveCircleOutline />

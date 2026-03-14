@@ -32,6 +32,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            // Start loading state immediately to cover the async Firestore fetch delay
+            setLoading(true);
             setUser(currentUser);
 
             if (currentUser) {

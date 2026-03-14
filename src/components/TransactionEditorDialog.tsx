@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, Typography, MenuItem, IconButton, Alert } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, Typography, IconButton, Alert } from '@mui/material';
 import { AddCircleOutline, RemoveCircleOutline } from '@mui/icons-material';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
 import { db, type Journal } from '../db/db';
+import { AccountAutocomplete } from './AccountAutocomplete';
 import { auth } from '../firebase';
 // import { forceUploadSync } removed to avoid unused variable warning
 
@@ -175,13 +176,12 @@ export default function TransactionEditorDialog({ open, onClose, journalToEdit }
                 </Box>
                 {debits.map((d, i) => (
                     <Box key={`deb-${i}`} display="flex" gap={1} alignItems="center" mb={1.5}>
-                        <TextField
-                            select size="small" fullWidth label="科目" value={d.code}
-                            onChange={(e) => updateLine('debits', i, 'code', Number(e.target.value))}
+                        <AccountAutocomplete
+                            accounts={accounts}
+                            value={d.code}
+                            onChange={(newCode) => updateLine('debits', i, 'code', newCode)}
                             disabled={isLoadingLines}
-                        >
-                            {accounts.map(a => <MenuItem key={a.code || a.id} value={a.code || a.id}>{a.code || a.id}: {a.name}</MenuItem>)}
-                        </TextField>
+                        />
                         <TextField
                             size="small" type="number" label="金額" value={d.amount || ''}
                             onChange={(e) => updateLine('debits', i, 'amount', Number(e.target.value))}
@@ -203,13 +203,12 @@ export default function TransactionEditorDialog({ open, onClose, journalToEdit }
                 </Box>
                 {credits.map((c, i) => (
                     <Box key={`cre-${i}`} display="flex" gap={1} alignItems="center" mb={1.5}>
-                        <TextField
-                            select size="small" fullWidth label="科目" value={c.code}
-                            onChange={(e) => updateLine('credits', i, 'code', Number(e.target.value))}
+                        <AccountAutocomplete
+                            accounts={accounts}
+                            value={c.code}
+                            onChange={(newCode) => updateLine('credits', i, 'code', newCode)}
                             disabled={isLoadingLines}
-                        >
-                            {accounts.map(a => <MenuItem key={a.code || a.id} value={a.code || a.id}>{a.code || a.id}: {a.name}</MenuItem>)}
-                        </TextField>
+                        />
                         <TextField
                             size="small" type="number" label="金額" value={c.amount || ''}
                             onChange={(e) => updateLine('credits', i, 'amount', Number(e.target.value))}

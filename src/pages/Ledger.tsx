@@ -8,6 +8,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type Journal } from '../db/db';
 import TransactionEditorDialog from '../components/TransactionEditorDialog';
 import { useFiscalYear } from '../contexts/FiscalYearContext';
+import { AccountAutocomplete } from '../components/AccountAutocomplete';
+import { TextField } from '@mui/material';
 
 export default function Ledger() {
     const { selectedYear } = useFiscalYear();
@@ -21,6 +23,8 @@ export default function Ledger() {
     const [editorOpen, setEditorOpen] = useState(false);
     const [editingJournal, setEditingJournal] = useState<Journal | null>(null);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [searchKeyword, setSearchKeyword] = useState('');
+    const [searchAccountId, setSearchAccountId] = useState<number | ''>('');
 
     const linesByJournalId = useMemo(() => {
         if (!allLines) return new Map<string, any[]>();
@@ -37,6 +41,25 @@ export default function Ledger() {
     }, [allLines]);
 
     if (!journals || !allLines || !accounts) return <Typography p={2}>Loading...</Typography>;
+
+    const filteredJournals = useMemo(() => {
+        if (!journals) return [];
+        return journals.filter(j => {
+            let match = true;
+            if (searchKeyword.trim() !== '') {
+                const keyword = searchKeyword.toLowerCase();
+                if (!j.description?.toLowerCase().includes(keyword)) {
+                    match = false;
+                }
+            }
+            if (match && String(searchAccountId) !== '') {
+                const jLines = linesByJournalId.get(j.id) || [];
+                const hasAccount = jLines.some(l => String(l.account_id) === String(searchAccountId));
+                if (!hasAccount) match = false;
+            }
+            return match;
+        });
+    }, [journals, searchKeyword, searchAccountId, linesByJournalId]);
 
     const handleHardDelete = async (ids: string[]) => {
         if (!ids.length) return;
@@ -105,6 +128,29 @@ export default function Ledger() {
                 </Box>
             </Box>
 
+            <Box mb={2} display="flex" gap={2} flexWrap="wrap" alignItems="center">
+                <TextField
+                    size="small"
+                    label="摘要・内容で検索"
+                    value={searchKeyword}
+                    onChange={(e) => setSearchKeyword(e.target.value)}
+                    sx={{ flex: 1, minWidth: '200px', bgcolor: 'white', borderRadius: 1 }}
+                />
+                <Box sx={{ flex: 1, minWidth: '200px' }}>
+                    <AccountAutocomplete
+                        accounts={accounts}
+                        value={searchAccountId}
+                        onChange={(newCode) => setSearchAccountId(newCode)}
+                        label="勘定科目で絞り込み"
+                    />
+                </Box>
+                {(searchKeyword || searchAccountId !== '') && (
+                    <Button variant="outlined" color="secondary" onClick={() => { setSearchKeyword(''); setSearchAccountId('') }}>
+                        条件クリア
+                    </Button>
+                )}
+            </Box>
+
             <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
                 <Table sx={{ minWidth: 800 }} size="small" aria-label="ledger table">
                     <TableHead sx={{ bgcolor: 'background.default' }}>
@@ -130,7 +176,7 @@ export default function Ledger() {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {journals.map((j) => {
+                        {filteredJournals.map((j) => {
                             const jLines = linesByJournalId.get(j.id) || [];
 
                             const debitsArray = jLines.filter(l => l.debit > 0);
@@ -185,7 +231,7 @@ export default function Ledger() {
                                 </TableRow>
                             );
                         })}
-                        {journals.length === 0 && (
+                        {filteredJournals.length === 0 && (
                             <TableRow>
                                 <TableCell colSpan={7} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                                     仕訳データがありません

@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Box, Typography, Button, Paper, TextField, CircularProgress, MenuItem, Snackbar, Alert, IconButton, Dialog, Stack, Checkbox, FormControlLabel } from '@mui/material';
+import { Box, Typography, Button, Paper, TextField, CircularProgress, Snackbar, Alert, IconButton, Dialog, Stack, Checkbox, FormControlLabel } from '@mui/material';
 import { UploadFile, AddCircleOutline, RemoveCircleOutline, CheckCircle, ErrorOutline, Close, SkipNext } from '@mui/icons-material';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
@@ -7,6 +7,7 @@ import dayjs from 'dayjs';
 import { db } from '../db/db';
 import { type AIResult } from '../services/ai_service';
 import { useAnalysis, type CSVQueueItem } from '../contexts/AnalysisContext';
+import { AccountAutocomplete } from './AccountAutocomplete';
 
 export default function CSVImport() {
     const { csvQueue: queue, addCsvItems, removeCsvItem, skipCsvItem, retryCsvItem } = useAnalysis();
@@ -71,8 +72,8 @@ export default function CSVImport() {
         const currentItem = queue.find(q => q.id === reviewingId);
         if (!currentItem) return;
 
-        const totalDebits = editingResult.debits.reduce((sum, d) => sum + d.amount, 0);
-        const totalCredits = editingResult.credits.reduce((sum, c) => sum + c.amount, 0);
+        const totalDebits = editingResult.debits.reduce((sum: number, d: { code: number; amount: number }) => sum + d.amount, 0);
+        const totalCredits = editingResult.credits.reduce((sum: number, c: { code: number; amount: number }) => sum + c.amount, 0);
 
         if (totalDebits !== totalCredits) {
             alert(`借方合計(¥${totalDebits})と貸方合計(¥${totalCredits})が一致しません。`);
@@ -301,14 +302,12 @@ export default function CSVImport() {
                         <Box mb={1.5} p={1.5} bgcolor="#ecfdf5" borderRadius={2} display="flex" justifyContent="space-between" alignItems="center">
                             <Typography variant="subtitle2" color="#059669" fontWeight="bold">借方 (Debit)</Typography>
                             <Typography variant="caption" color="#059669" fontWeight="bold">
-                                計: ¥{editingResult.debits.reduce((sum, d) => sum + d.amount, 0).toLocaleString()}
+                                計: ¥{editingResult.debits.reduce((sum: number, d: any) => sum + d.amount, 0).toLocaleString()}
                             </Typography>
                         </Box>
                         {editingResult.debits.map((d, i) => (
                             <Box key={`deb-${i}`} display="flex" gap={1} alignItems="center" mb={1.5}>
-                                <TextField select size="small" fullWidth label="科目" value={d.code} onChange={(e) => updateLine('debits', i, 'code', Number(e.target.value))}>
-                                    {accounts.map(a => <MenuItem key={a.code} value={a.code}>{a.code}: {a.name}</MenuItem>)}
-                                </TextField>
+                                <AccountAutocomplete accounts={accounts} value={d.code} onChange={(c) => updateLine('debits', i, 'code', c)} />
                                 <TextField size="small" type="number" label="金額" value={d.amount || ''} onChange={(e) => updateLine('debits', i, 'amount', Number(e.target.value))} sx={{ width: '120px' }} />
                                 <IconButton sx={{ color: 'error.main', p: 0.5 }} onClick={() => removeLine('debits', i)} disabled={editingResult.debits.length <= 1}>
                                     <RemoveCircleOutline />
@@ -320,14 +319,12 @@ export default function CSVImport() {
                         <Box mt={1} mb={1.5} p={1.5} bgcolor="#fffbeb" borderRadius={2} display="flex" justifyContent="space-between" alignItems="center">
                             <Typography variant="subtitle2" color="#b45309" fontWeight="bold">貸方 (Credit)</Typography>
                             <Typography variant="caption" color="#b45309" fontWeight="bold">
-                                計: ¥{editingResult.credits.reduce((sum, c) => sum + c.amount, 0).toLocaleString()}
+                                計: ¥{editingResult.credits.reduce((sum: number, c: any) => sum + c.amount, 0).toLocaleString()}
                             </Typography>
                         </Box>
                         {editingResult.credits.map((c, i) => (
                             <Box key={`cre-${i}`} display="flex" gap={1} alignItems="center" mb={1.5}>
-                                <TextField select size="small" fullWidth label="科目" value={c.code} onChange={(e) => updateLine('credits', i, 'code', Number(e.target.value))}>
-                                    {accounts.map(a => <MenuItem key={a.code} value={a.code}>{a.code}: {a.name}</MenuItem>)}
-                                </TextField>
+                                <AccountAutocomplete accounts={accounts} value={c.code} onChange={(codeVal) => updateLine('credits', i, 'code', codeVal)} />
                                 <TextField size="small" type="number" label="金額" value={c.amount || ''} onChange={(e) => updateLine('credits', i, 'amount', Number(e.target.value))} sx={{ width: '120px' }} />
                                 <IconButton sx={{ color: 'error.main', p: 0.5 }} onClick={() => removeLine('credits', i)} disabled={editingResult.credits.length <= 1}>
                                     <RemoveCircleOutline />
