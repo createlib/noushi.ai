@@ -24,6 +24,7 @@ export default function Home() {
 
     const [isSyncing, setIsSyncing] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
+    const [tabIndex, setTabIndex] = useState(0);
 
     useEffect(() => {
         setIsMounted(true);
@@ -104,8 +105,6 @@ export default function Home() {
     const avgMonthlyProfit = (income - expense) / activeMonths;
     const highestExpense = expenseData.length > 0 ? expenseData[0] : null;
     const costDependency = (highestExpense && income > 0) ? (highestExpense.value / income) * 100 : 0;
-
-    const [tabIndex, setTabIndex] = useState(0);
 
     const handleSync = async () => {
         if (!settings?.useFirebaseSync) return;
