@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { Box, Typography, Button } from '@mui/material';
+import React, { useRef, useState } from 'react';
+import { Box, Typography, Button, CircularProgress } from '@mui/material';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
@@ -76,42 +76,53 @@ interface PdfExportConfig {
 
 export const PdfExporter: React.FC<{ data: PdfExportConfig }> = ({ data }) => {
     const reportRef = useRef<HTMLDivElement>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
 
     const handleGeneratePdf = async () => {
         if (!reportRef.current) return;
+        setIsGenerating(true);
 
-        // 一時的に表示してキャプチャ
-        reportRef.current.style.display = 'block';
+        try {
+            // 一時的に表示してキャプチャ
+            reportRef.current.style.display = 'block';
 
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
+            // Allow DOM to paint thoroughly before capturing
+            await new Promise(resolve => setTimeout(resolve, 50));
 
-        const sections = reportRef.current.querySelectorAll('.pdf-page-section');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
 
-        for (let i = 0; i < sections.length; i++) {
-            const element = sections[i] as HTMLElement;
-            const canvas = await html2canvas(element, { scale: 2 });
-            const imgData = canvas.toDataURL('image/png');
+            const sections = reportRef.current.querySelectorAll('.pdf-page-section');
 
-            if (i > 0) pdf.addPage();
+            for (let i = 0; i < sections.length; i++) {
+                const element = sections[i] as HTMLElement;
+                const canvas = await html2canvas(element, { scale: 2 });
+                const imgData = canvas.toDataURL('image/png');
 
-            const imgRatio = canvas.height / canvas.width;
-            const pdfRatio = pdfHeight / pdfWidth;
+                if (i > 0) pdf.addPage();
 
-            let finalW = pdfWidth;
-            let finalH = pdfWidth * imgRatio;
-            if (imgRatio > pdfRatio) {
-                finalH = pdfHeight;
-                finalW = pdfHeight / imgRatio;
+                const imgRatio = canvas.height / canvas.width;
+                const pdfRatio = pdfHeight / pdfWidth;
+
+                let finalW = pdfWidth;
+                let finalH = pdfWidth * imgRatio;
+                if (imgRatio > pdfRatio) {
+                    finalH = pdfHeight;
+                    finalW = pdfHeight / imgRatio;
+                }
+
+                pdf.addImage(imgData, 'PNG', 0, 0, finalW, finalH);
             }
 
-            pdf.addImage(imgData, 'PNG', 0, 0, finalW, finalH);
+            reportRef.current.style.display = 'none';
+
+            pdf.save(`TaxReport_${data.selectedYear}.pdf`);
+        } catch (error) {
+            console.error("Tax PDF generation failed:", error);
+        } finally {
+            setIsGenerating(false);
         }
-
-        reportRef.current.style.display = 'none';
-
-        pdf.save(`TaxReport_${data.selectedYear}.pdf`);
     };
 
     const pageSx = {
@@ -129,8 +140,9 @@ export const PdfExporter: React.FC<{ data: PdfExportConfig }> = ({ data }) => {
             <>
                 <Button
                     variant="contained"
-                    startIcon={<PictureAsPdfIcon />}
+                    startIcon={isGenerating ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <PictureAsPdfIcon />}
                     onClick={handleGeneratePdf}
+                    disabled={isGenerating}
                     sx={{ bgcolor: '#dc2626', color: 'white', '&:hover': { bgcolor: '#b91c1c' }, borderRadius: 8 }}
                     disableElevation
                 >

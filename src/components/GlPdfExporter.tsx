@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Box, Typography, Button, CircularProgress } from '@mui/material';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { createRoot } from 'react-dom/client';
+import { flushSync } from 'react-dom';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -86,68 +88,27 @@ export const GlPdfExporter: React.FC<{ accounts: any[], transactions: any[], sel
 
     const handleGeneratePdf = async () => {
         setIsGenerating(true);
+
+        const tempContainer = document.createElement('div');
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.top = '-9999px';
+        tempContainer.style.left = '-9999px';
+        document.body.appendChild(tempContainer);
+
+        const root = createRoot(tempContainer);
+
         try {
-            const wrapper = document.getElementById('gl-pdf-wrapper');
-            if (wrapper) wrapper.style.display = 'block';
-
-            // Allow DOM to paint before html2canvas
-            await new Promise(resolve => setTimeout(resolve, 100));
-
             const pdf = new jsPDF('l', 'mm', 'a4');
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
 
             for (let i = 0; i < pages.length; i++) {
-                const element = document.getElementById(`gl-page-${i}`);
-                if (!element) continue;
+                const pageData = pages[i];
 
-                const canvas = await html2canvas(element, { scale: 2 });
-
-                const imgData = canvas.toDataURL('image/png');
-
-                if (i > 0) pdf.addPage();
-
-                // Fit to width or height
-                const imgRatio = canvas.height / canvas.width;
-                const pdfRatio = pdfHeight / pdfWidth;
-
-                let finalW = pdfWidth;
-                let finalH = pdfWidth * imgRatio;
-                if (imgRatio > pdfRatio) {
-                    finalH = pdfHeight;
-                    finalW = pdfHeight / imgRatio;
-                }
-
-                pdf.addImage(imgData, 'PNG', 0, 0, finalW, finalH);
-            }
-
-            if (wrapper) wrapper.style.display = 'none';
-            pdf.save(`GeneralLedger_${selectedYear}.pdf`);
-        } catch (error) {
-            console.error("PDF generation failed", error);
-        } finally {
-            setIsGenerating(false);
-        }
-    };
-
-    try {
-        return (
-            <React.Fragment>
-                <Button
-                    variant="outlined"
-                    startIcon={isGenerating ? <CircularProgress size={20} /> : <PictureAsPdfIcon />}
-                    onClick={handleGeneratePdf}
-                    disabled={isGenerating}
-                    sx={{ borderRadius: 8 }}
-                >
-                    総勘定元帳PDF
-                </Button>
-
-                <Box id="gl-pdf-wrapper" sx={{ display: 'none', position: 'absolute', top: '-9999px', left: '-9999px' }}>
-                    {pages.map((pageData, index) => (
+                flushSync(() => {
+                    root.render(
                         <Box
-                            key={index}
-                            id={`gl-page-${index}`}
+                            id="gl-pdf-render-target"
                             sx={{
                                 width: '297mm', // A4 Landscape
                                 minHeight: '210mm',
@@ -194,8 +155,54 @@ export const GlPdfExporter: React.FC<{ accounts: any[], transactions: any[], sel
                                 </tbody>
                             </table>
                         </Box>
-                    ))}
-                </Box>
+                    );
+                });
+
+                await new Promise(resolve => setTimeout(resolve, 50));
+
+                const element = tempContainer.querySelector('#gl-pdf-render-target') as HTMLElement;
+                if (!element) continue;
+
+                const canvas = await html2canvas(element, { scale: 2 });
+                const imgData = canvas.toDataURL('image/png');
+
+                if (i > 0) pdf.addPage();
+
+                const imgRatio = canvas.height / canvas.width;
+                const pdfRatio = pdfHeight / pdfWidth;
+
+                let finalW = pdfWidth;
+                let finalH = pdfWidth * imgRatio;
+                if (imgRatio > pdfRatio) {
+                    finalH = pdfHeight;
+                    finalW = pdfHeight / imgRatio;
+                }
+
+                pdf.addImage(imgData, 'PNG', 0, 0, finalW, finalH);
+            }
+
+            pdf.save(`GeneralLedger_${selectedYear}.pdf`);
+        } catch (error) {
+            console.error("PDF generation failed", error);
+        } finally {
+            root.unmount();
+            document.body.removeChild(tempContainer);
+            setIsGenerating(false);
+        }
+    };
+
+    try {
+        return (
+            <React.Fragment>
+                <Button
+                    variant="outlined"
+                    startIcon={isGenerating ? <CircularProgress size={20} /> : <PictureAsPdfIcon />}
+                    onClick={handleGeneratePdf}
+                    disabled={isGenerating}
+                    sx={{ borderRadius: 8 }}
+                >
+                    総勘定元帳PDF{isGenerating ? ' 生成中...' : ''}
+                </Button>
             </React.Fragment>
         );
     } catch (e: any) {

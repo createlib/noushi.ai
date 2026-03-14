@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Box, Typography, Button, CircularProgress } from '@mui/material';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { createRoot } from 'react-dom/client';
+import { flushSync } from 'react-dom';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
@@ -57,71 +59,28 @@ export const JournalPdfExporter: React.FC<{ transactions: any[], accounts: any[]
 
     const handleGeneratePdf = async () => {
         setIsGenerating(true);
+        // Create a temporary detached container for rendering single pages
+        const tempContainer = document.createElement('div');
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.top = '-9999px';
+        tempContainer.style.left = '-9999px';
+        document.body.appendChild(tempContainer);
+
+        const root = createRoot(tempContainer);
+
         try {
-            const wrapper = document.getElementById('journal-pdf-wrapper');
-            if (wrapper) wrapper.style.display = 'block';
-
-            // Allow DOM to paint before html2canvas captures
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-            // Use portrait for Journal
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
 
             for (let i = 0; i < pages.length; i++) {
-                const element = document.getElementById(`journal-page-${i}`);
-                if (!element) continue;
+                const pageData = pages[i];
 
-                // Create canvas with scale 2 for better text clarity
-                const canvas = await html2canvas(element, { scale: 2 });
-                const imgData = canvas.toDataURL('image/png');
-
-                if (i > 0) pdf.addPage();
-
-                const imgRatio = canvas.height / canvas.width;
-                const pdfRatio = pdfHeight / pdfWidth;
-
-                let finalW = pdfWidth;
-                let finalH = pdfWidth * imgRatio;
-                if (imgRatio > pdfRatio) {
-                    finalH = pdfHeight;
-                    finalW = pdfHeight / imgRatio;
-                }
-
-                pdf.addImage(imgData, 'PNG', 0, 0, finalW, finalH);
-            }
-
-            if (wrapper) wrapper.style.display = 'none';
-            pdf.save(`Journal_${selectedYear}.pdf`);
-        } catch (error) {
-            console.error("PDF generation failed", error);
-        } finally {
-            setIsGenerating(false);
-        }
-    };
-
-    try {
-        if (!transactions || transactions.length === 0) return null;
-
-        return (
-            <React.Fragment>
-                <Button
-                    variant="contained"
-                    sx={{ bgcolor: 'white', color: 'error.main', border: '1px solid', borderColor: 'error.main', borderRadius: 8, '&:hover': { bgcolor: '#fef2f2' } }}
-                    startIcon={isGenerating ? <CircularProgress size={20} color="error" /> : <PictureAsPdfIcon />}
-                    onClick={handleGeneratePdf}
-                    disabled={isGenerating}
-                    disableElevation
-                >
-                    仕訳帳 (PDF)
-                </Button>
-
-                <Box id="journal-pdf-wrapper" sx={{ display: 'none', position: 'absolute', top: '-9999px', left: '-9999px' }}>
-                    {pages.map((pageData, index) => (
+                // Synchronously render exactly one page into the DOM
+                flushSync(() => {
+                    root.render(
                         <Box
-                            key={index}
-                            id={`journal-page-${index}`}
+                            id="pdf-render-target"
                             sx={{
                                 width: '210mm', // A4 Portrait
                                 minHeight: '297mm',
@@ -156,7 +115,6 @@ export const JournalPdfExporter: React.FC<{ transactions: any[], accounts: any[]
                                 </thead>
                                 <tbody>
                                     {pageData.rows.map((r: any, rIdx: number) => {
-                                        // Highlight alternate rows where a new transaction starts
                                         const isNewTransaction = r.no !== '';
                                         const bgColor = isNewTransaction && r.no % 2 === 0 ? '#f8fafc' : 'white';
                                         const topBorder = isNewTransaction ? '1px solid #93c5fd' : 'none';
@@ -180,8 +138,58 @@ export const JournalPdfExporter: React.FC<{ transactions: any[], accounts: any[]
                                 </tbody>
                             </table>
                         </Box>
-                    ))}
-                </Box>
+                    );
+                });
+
+                // Allow DOM to paint thoroughly
+                await new Promise(resolve => setTimeout(resolve, 50));
+
+                const element = tempContainer.querySelector('#pdf-render-target') as HTMLElement;
+                if (!element) continue;
+
+                const canvas = await html2canvas(element, { scale: 2 });
+                const imgData = canvas.toDataURL('image/png');
+
+                if (i > 0) pdf.addPage();
+
+                const imgRatio = canvas.height / canvas.width;
+                const pdfRatio = pdfHeight / pdfWidth;
+
+                let finalW = pdfWidth;
+                let finalH = pdfWidth * imgRatio;
+                if (imgRatio > pdfRatio) {
+                    finalH = pdfHeight;
+                    finalW = pdfHeight / imgRatio;
+                }
+
+                pdf.addImage(imgData, 'PNG', 0, 0, finalW, finalH);
+            }
+
+            pdf.save(`Journal_${selectedYear}.pdf`);
+        } catch (error) {
+            console.error("PDF generation failed", error);
+        } finally {
+            root.unmount();
+            document.body.removeChild(tempContainer);
+            setIsGenerating(false);
+        }
+    };
+
+    try {
+        if (!transactions || transactions.length === 0) return null;
+
+        return (
+            <React.Fragment>
+                <Button
+                    variant="contained"
+                    sx={{ bgcolor: 'white', color: 'error.main', border: '1px solid', borderColor: 'error.main', borderRadius: 8, '&:hover': { bgcolor: '#fef2f2' } }}
+                    startIcon={isGenerating ? <CircularProgress size={20} color="error" /> : <PictureAsPdfIcon />}
+                    onClick={handleGeneratePdf}
+                    disabled={isGenerating}
+                    disableElevation
+                >
+                    仕訳帳 (PDF){isGenerating ? ' 生成中...' : ''}
+                </Button>
             </React.Fragment>
         );
     } catch (e: any) {
