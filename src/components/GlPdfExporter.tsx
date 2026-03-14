@@ -204,6 +204,7 @@ export const GlPdfExporter: React.FC<{ accounts: any[], transactions: any[], sel
         return (
             <React.Fragment>
                 <Button
+                    fullWidth
                     variant="outlined"
                     startIcon={isGenerating ? <CircularProgress size={20} /> : <PictureAsPdfIcon />}
                     onClick={handleGeneratePdf}

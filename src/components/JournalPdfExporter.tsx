@@ -187,6 +187,7 @@ export const JournalPdfExporter: React.FC<{ transactions: any[], accounts: any[]
         return (
             <React.Fragment>
                 <Button
+                    fullWidth
                     variant="contained"
                     sx={{ bgcolor: 'white', color: 'error.main', border: '1px solid', borderColor: 'error.main', borderRadius: 8, '&:hover': { bgcolor: '#fef2f2' } }}
                     startIcon={isGenerating ? <CircularProgress size={20} color="error" /> : <PictureAsPdfIcon />}
