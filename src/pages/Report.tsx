@@ -10,6 +10,7 @@ import { db } from '../db/db';
 import { useFiscalYear } from '../contexts/FiscalYearContext';
 import { PdfExporter } from '../components/PdfExporter';
 import { GlPdfExporter } from '../components/GlPdfExporter';
+import { JournalPdfExporter } from '../components/JournalPdfExporter';
 
 export default function Report() {
     const { selectedYear } = useFiscalYear();
@@ -379,6 +380,63 @@ export default function Report() {
             saveAs(data, `GeneralLedger_${selectedYear}.xlsx`);
         };
 
+        const handleDownloadJournalExcel = () => {
+            if (!transactions || !accounts) return;
+
+            const wb = XLSX.utils.book_new();
+            const wsData: any[][] = [];
+
+            wsData.push(['仕訳帳', '', '', '', '', '', '']);
+            wsData.push([`年度: ${selectedYear}年`, '', '', '', '', '', '']);
+            wsData.push(['']);
+            wsData.push(['日付', '仕訳No', '借方科目', '借方金額', '貸方科目', '貸方金額', '摘要']);
+
+            // Sort by date ascending for general journal order
+            const sortedTransactions = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+            sortedTransactions.forEach((t, idx) => {
+                const tDebits = t.debits || [];
+                const tCredits = t.credits || [];
+                const maxLines = Math.max(tDebits.length, tCredits.length, 1);
+
+                for (let i = 0; i < maxLines; i++) {
+                    const d = tDebits[i];
+                    const c = tCredits[i];
+
+                    const debName = d ? (accounts.find(a => String(a.code) === String(d.code))?.name || '不明') : '';
+                    const creName = c ? (accounts.find(a => String(a.code) === String(c.code))?.name || '不明') : '';
+
+                    wsData.push([
+                        i === 0 ? t.date : '',
+                        i === 0 ? idx + 1 : '',
+                        debName,
+                        d ? d.amount : '',
+                        creName,
+                        c ? c.amount : '',
+                        i === 0 ? t.description || '' : ''
+                    ]);
+                }
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+            // Auto size columns (lazy approach setting decent explicit widths)
+            ws['!cols'] = [
+                { wch: 12 }, // Date
+                { wch: 8 },  // No
+                { wch: 15 }, // Debit Code
+                { wch: 12 }, // Debit Amt
+                { wch: 15 }, // Credit Code
+                { wch: 12 }, // Credit Amt
+                { wch: 30 }, // Desc
+            ];
+
+            XLSX.utils.book_append_sheet(wb, ws, "仕訳帳");
+            const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const data = new Blob([excelBuffer], { type: 'application/octet-stream' });
+            saveAs(data, `Journal_${selectedYear}.xlsx`);
+        };
+
         const handleDownloadPL = () => {
             const wb = XLSX.utils.book_new();
             const wsData: any[][] = [];
@@ -548,6 +606,9 @@ export default function Report() {
                         年間の取引データを各種Excel形式でダウンロードできます。確定申告ソフトや税理士への提出に利用可能です。
                     </Typography>
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                        <Button variant="contained" color="secondary" startIcon={<DownloadIcon />} onClick={handleDownloadJournalExcel} disableElevation sx={{ borderRadius: 8 }}>
+                            仕訳帳 (Excel)
+                        </Button>
                         <Button variant="contained" color="primary" startIcon={<DownloadIcon />} onClick={handleDownloadExcel} disableElevation sx={{ borderRadius: 8 }}>
                             総勘定元帳 (Excel)
                         </Button>
@@ -560,8 +621,9 @@ export default function Report() {
                     </Stack>
 
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mt={3}>
-                        <PdfExporter data={pdfData} />
+                        <JournalPdfExporter transactions={transactions} accounts={accounts} selectedYear={selectedYear} />
                         <GlPdfExporter accounts={accounts} transactions={transactions} selectedYear={selectedYear} balancesKishu={accountBalancesKishu} />
+                        <PdfExporter data={pdfData} />
                     </Stack>
                 </Paper>
 

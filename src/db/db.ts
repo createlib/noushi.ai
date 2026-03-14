@@ -52,6 +52,13 @@ export interface Settings {
     geminiApiKey: string;
     aiModel?: string;
     useFirebaseSync?: boolean;
+    businessName?: string;
+    businessType?: {
+        general?: boolean;
+        agriculture?: boolean;
+        realEstate?: boolean;
+        salary?: boolean;
+    };
 }
 
 // レガシーデータ移行用

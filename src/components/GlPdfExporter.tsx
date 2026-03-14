@@ -4,8 +4,13 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '../db/db';
+
 export const GlPdfExporter: React.FC<{ accounts: any[], transactions: any[], selectedYear: number, balancesKishu: Record<number, number> }> = ({ accounts, transactions, selectedYear, balancesKishu }) => {
     const [isGenerating, setIsGenerating] = useState(false);
+    const settings = useLiveQuery(() => db.settings.get(1), []);
+    const businessName = settings?.businessName || '';
 
     // Filter accounts that have transactions
     const activeAccounts = accounts.filter(account => {
@@ -17,7 +22,7 @@ export const GlPdfExporter: React.FC<{ accounts: any[], transactions: any[], sel
 
     // Build pages
     const pages: any[] = [];
-    const maxRowsPerPage = 22; // Fit landscape A4
+    const maxRowsPerPage = 18; // Reduced to fit landscape A4 safely with bottom margins
 
     activeAccounts.forEach(account => {
         const relatedTransactions = transactions.filter(t =>
@@ -143,7 +148,7 @@ export const GlPdfExporter: React.FC<{ accounts: any[], transactions: any[], sel
                             sx={{
                                 width: '297mm', // A4 Landscape
                                 height: '210mm',
-                                padding: '20mm',
+                                padding: '15mm 20mm 20mm 20mm',
                                 bgcolor: 'white',
                                 color: 'black',
                                 fontFamily: '"MS Mincho", serif',
@@ -152,9 +157,12 @@ export const GlPdfExporter: React.FC<{ accounts: any[], transactions: any[], sel
                         >
                             <Box display="flex" justifyContent="space-between" mb={2}>
                                 <Typography variant="h5" fontWeight="bold">総勘定元帳 ({selectedYear}年)</Typography>
-                                <Typography variant="h6">
-                                    勘定科目: {pageData.account.code} {pageData.account.name} ({pageData.pageIdx}/{pageData.totalPages})
-                                </Typography>
+                                <Box textAlign="right">
+                                    {businessName && <Typography variant="subtitle2" color="text.secondary">{businessName}</Typography>}
+                                    <Typography variant="h6">
+                                        勘定科目: {pageData.account.code} {pageData.account.name} ({pageData.pageIdx}/{pageData.totalPages})
+                                    </Typography>
+                                </Box>
                             </Box>
                             <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid black', fontSize: '12px' }}>
                                 <thead>
