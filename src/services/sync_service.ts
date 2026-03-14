@@ -57,7 +57,15 @@ export async function performSync(uid: string): Promise<void> {
     let remoteData: SyncDataPayload | null = null;
     try {
         const url = await getDownloadURL(storageRef);
-        const resp = await fetch(url);
+        // ブラウザの強力なキャッシュを回避するためにパラメータを付与
+        const resp = await fetch(url + `&_t=${Date.now()}`, {
+            cache: 'no-store',
+            headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+            }
+        });
         if (resp.ok) {
             remoteData = await resp.json();
         }
