@@ -12,6 +12,11 @@ import { useState, useEffect, Suspense } from 'react';
 import { performSync } from '../services/sync_service';
 import { auth } from '../firebase';
 
+import TaxSimulation from '../components/analytics/TaxSimulation';
+import BudgetAlerts from '../components/analytics/BudgetAlerts';
+import RevenueDependency from '../components/analytics/RevenueDependency';
+import BreakEvenPoint from '../components/analytics/BreakEvenPoint';
+
 const COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
 
 export default function Home() {
@@ -75,9 +80,13 @@ export default function Home() {
         month: `${i + 1}月`,
         income: 0,
         expense: 0,
-        profit: 0
+        profit: 0,
+        lastYearIncome: 0,
+        lastYearExpense: 0,
+        lastYearProfit: 0
     }));
 
+    // 本年データ集計
     yearLines.forEach(line => {
         const j = journals.find(j => j.id === line.journal_id);
         const acc = accounts.find(a => String(a.code || a.id) === String(line.account_id));
@@ -97,8 +106,33 @@ export default function Home() {
         }
     });
 
+    // 前年データ集計 (YoY)
+    const lastYearJournals = journals.filter(j => j.date && j.date.startsWith(String(selectedYear - 1)) && !j.deletedAt);
+    const lastYearJournalIds = new Set(lastYearJournals.map(j => j.id));
+    const lastYearLines = journalLines.filter(l => lastYearJournalIds.has(l.journal_id));
+
+    lastYearLines.forEach(line => {
+        const j = journals.find(j => j.id === line.journal_id);
+        const acc = accounts.find(a => String(a.code || a.id) === String(line.account_id));
+        if (!j || !j.date || !acc) return;
+
+        const monthNum = parseInt(j.date.substring(5, 7), 10);
+        if (isNaN(monthNum) || monthNum < 1 || monthNum > 12) return;
+
+        const monthIndex = monthNum - 1;
+
+        if (acc.type === 'revenue' && line.credit > 0) {
+            monthlyData[monthIndex].lastYearIncome += line.credit;
+        }
+
+        if (acc.type === 'expense' && line.debit > 0) {
+            monthlyData[monthIndex].lastYearExpense += line.debit;
+        }
+    });
+
     monthlyData.forEach(m => {
         m.profit = m.income - m.expense;
+        m.lastYearProfit = m.lastYearIncome - m.lastYearExpense;
     });
 
     // Calculate KPIs
@@ -107,6 +141,20 @@ export default function Home() {
     const avgMonthlyProfit = (income - expense) / activeMonths;
     const highestExpense = expenseData.length > 0 ? expenseData[0] : null;
     const costDependency = (highestExpense && income > 0) ? (highestExpense.value / income) * 100 : 0;
+
+    // Current Month Expenses for Budget Alerts
+    const currentMonthNum = new Date().getMonth() + 1;
+    const currentMonthExpenses: Record<string, number> = {};
+    yearLines.forEach(line => {
+        const j = journals.find(j => j.id === line.journal_id);
+        const acc = accounts.find(a => String(a.code || a.id) === String(line.account_id));
+        if (!j || !j.date || !acc || acc.type !== 'expense') return;
+
+        const monthNum = parseInt(j.date.substring(5, 7), 10);
+        if (monthNum === currentMonthNum) {
+            currentMonthExpenses[acc.name] = (currentMonthExpenses[acc.name] || 0) + line.debit;
+        }
+    });
 
     const handleSync = async () => {
         if (!settings?.useFirebaseSync) return;
@@ -187,8 +235,9 @@ export default function Home() {
                 <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
                     <Tabs value={tabIndex} onChange={(_, v) => setTabIndex(v)} variant="scrollable" scrollButtons="auto">
                         <Tab label="経費内訳" />
-                        <Tab label="月別収支トレンド" />
-                        <Tab label="経営ヘルスチェック" />
+                        <Tab label="年間収支トレンド" />
+                        <Tab label="経営リスク分析" />
+                        <Tab label="税金・予算管理" />
                     </Tabs>
                 </Box>
 
@@ -251,9 +300,11 @@ export default function Home() {
                                                 contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                                             />
                                             <Legend wrapperStyle={{ fontSize: '0.75rem' }} />
-                                            <Bar dataKey="income" name="収入" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                                            <Bar dataKey="expense" name="経費" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                                            <Line type="monotone" dataKey="profit" name="利益" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} />
+                                            <Bar dataKey="lastYearIncome" name={`前年収入 (${selectedYear - 1})`} fill="#cbd5e1" radius={[4, 4, 0, 0]} maxBarSize={20} />
+                                            <Bar dataKey="income" name={`本年収入 (${selectedYear})`} fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                                            <Bar dataKey="lastYearExpense" name={`前年経費 (${selectedYear - 1})`} fill="#e2e8f0" radius={[4, 4, 0, 0]} maxBarSize={20} />
+                                            <Bar dataKey="expense" name={`本年経費 (${selectedYear})`} fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                                            <Line type="monotone" dataKey="profit" name={`本年利益 (${selectedYear})`} stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} />
                                         </ComposedChart>
                                     </ResponsiveContainer>
                                 )}
@@ -261,8 +312,8 @@ export default function Home() {
                         )}
 
                         {tabIndex === 2 && (
-                            <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} gap={3} sx={{ p: 1 }}>
-                                <Box flex={1}>
+                            <Box display="flex" flexDirection="column" gap={3}>
+                                <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(3, 1fr)' }} gap={3} sx={{ p: 1 }}>
                                     <Box p={3} borderRadius={2} bgcolor="#f8fafc" border="1px solid #e2e8f0" height="100%">
                                         <Typography variant="caption" color="text.secondary" fontWeight="bold">売上高利益率 (Profit Margin)</Typography>
                                         <Typography variant="h4" fontWeight="800" color={profitMargin >= 20 ? '#166534' : profitMargin > 0 ? '#1e40af' : '#991b1b'} mt={1}>
@@ -275,8 +326,6 @@ export default function Home() {
                                                         "現在、赤字状態です。早急に固定費などの見直しラインを確認してください。"}
                                         </Typography>
                                     </Box>
-                                </Box>
-                                <Box flex={1}>
                                     <Box p={3} borderRadius={2} bgcolor="#f8fafc" border="1px solid #e2e8f0" height="100%">
                                         <Typography variant="caption" color="text.secondary" fontWeight="bold">月平均生成キャッシュフロー</Typography>
                                         <Typography variant="h4" fontWeight="800" color={avgMonthlyProfit > 0 ? '#166534' : '#991b1b'} mt={1}>
@@ -286,8 +335,6 @@ export default function Home() {
                                             活動月（{activeMonths}ヶ月ベース）でならした場合、毎月手元にこれだけの現金が新しく残る計算です。
                                         </Typography>
                                     </Box>
-                                </Box>
-                                <Box flex={1}>
                                     <Box p={3} borderRadius={2} bgcolor="#f8fafc" border="1px solid #e2e8f0" height="100%">
                                         <Typography variant="caption" color="text.secondary" fontWeight="bold">最大コスト過多リスク</Typography>
                                         <Typography variant="h4" fontWeight="800" color={costDependency > 50 ? '#991b1b' : costDependency > 30 ? '#b45309' : '#166534'} mt={1}>
@@ -300,6 +347,17 @@ export default function Home() {
                                         </Typography>
                                     </Box>
                                 </Box>
+                                <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(2, 1fr)' }} gap={3} sx={{ px: 1 }}>
+                                    <BreakEvenPoint income={income} expense={expense} yearLines={yearLines} accounts={accounts} />
+                                    <RevenueDependency yearLines={yearLines} journals={yearJournals} accounts={accounts} />
+                                </Box>
+                            </Box>
+                        )}
+
+                        {tabIndex === 3 && (
+                            <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(2, 1fr)' }} gap={3} sx={{ p: 1 }}>
+                                <TaxSimulation income={income} expense={expense} taxReturnMethod={settings?.taxReturnMethod || 'white'} />
+                                <BudgetAlerts currentMonthExpenses={currentMonthExpenses} monthlyBudgets={settings?.monthlyBudgets || {}} currentMonthNum={currentMonthNum} />
                             </Box>
                         )}
                     </Paper>

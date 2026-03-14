@@ -59,6 +59,8 @@ export interface Settings {
         realEstate?: boolean;
         salary?: boolean;
     };
+    taxReturnMethod?: 'blue' | 'white';
+    monthlyBudgets?: Record<string, number>;
 }
 
 // レガシーデータ移行用

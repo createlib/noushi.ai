@@ -34,6 +34,10 @@ export default function Settings() {
         salary: false
     });
 
+    // Analytics Settings
+    const [taxReturnMethod, setTaxReturnMethod] = useState<'blue' | 'white'>('white');
+    const [monthlyBudgets, setMonthlyBudgets] = useState<Record<string, number>>({});
+
     const navigate = useNavigate();
 
     const [saveSuccess, setSaveSuccess] = useState(false);
@@ -60,6 +64,8 @@ export default function Settings() {
                     salary: !!currentSettings.businessType.salary
                 });
             }
+            if (currentSettings.taxReturnMethod) setTaxReturnMethod(currentSettings.taxReturnMethod);
+            if (currentSettings.monthlyBudgets) setMonthlyBudgets(currentSettings.monthlyBudgets);
         }
     }, [currentSettings]);
 
@@ -70,7 +76,9 @@ export default function Settings() {
                 aiModel,
                 useFirebaseSync,
                 businessName,
-                businessType
+                businessType,
+                taxReturnMethod,
+                monthlyBudgets
             };
 
             // 1. Save locally to IndexedDB
@@ -266,6 +274,55 @@ export default function Settings() {
                     <Box mt={2}>
                         <Button variant="outlined" color="secondary" onClick={handleExport}>
                             全データをローカルに保存
+                        </Button>
+                    </Box>
+                </AccordionDetails>
+            </Accordion>
+
+            <Accordion expanded={expanded === 'panel_analytics'} onChange={handleAccordionChange('panel_analytics')} variant="outlined" sx={{ mb: 1, borderRadius: '8px !important', '&:before': { display: 'none' } }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ bgcolor: '#f8fafc', borderRadius: expanded === 'panel_analytics' ? '8px 8px 0 0' : '8px' }}>
+                    <Typography variant="subtitle1" fontWeight="bold">アナリティクス / 分析設定</Typography>
+                </AccordionSummary>
+                <AccordionDetails sx={{ pt: 3 }}>
+                    <Typography variant="subtitle2" gutterBottom>納税額シミュレーション用設定</Typography>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                        今年の確定申告の予定申告方法を選択してください。（未設定時は保守的な白色申告としてシミュレーションされます）
+                    </Typography>
+                    <TextField
+                        select
+                        label="申告方法"
+                        fullWidth
+                        margin="normal"
+                        value={taxReturnMethod}
+                        onChange={(e) => setTaxReturnMethod(e.target.value as 'blue' | 'white')}
+                        sx={{ mb: 4 }}
+                    >
+                        <MenuItem value="white">白色申告 (特別控除0円)</MenuItem>
+                        <MenuItem value="blue">青色申告 (最大65万円控除)</MenuItem>
+                    </TextField>
+
+                    <Typography variant="subtitle2" gutterBottom>経費の月間目標予算 (予算消化アラート用)</Typography>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                        使いすぎを防ぎたい主要な経費科目の1ヶ月あたりの予算上限（円）を設定してください。
+                    </Typography>
+                    {['接待交際費', '旅費交通費', '消耗品費', '広告宣伝費'].map(category => (
+                        <TextField
+                            key={category}
+                            label={`${category} (月額)`}
+                            type="number"
+                            fullWidth
+                            margin="normal"
+                            value={monthlyBudgets[category] || ''}
+                            onChange={(e) => setMonthlyBudgets({
+                                ...monthlyBudgets,
+                                [category]: Number(e.target.value)
+                            })}
+                        />
+                    ))}
+
+                    <Box mt={3} mb={1}>
+                        <Button variant="contained" color="primary" onClick={handleSave} disableElevation>
+                            分析設定を保存する
                         </Button>
                     </Box>
                 </AccordionDetails>
