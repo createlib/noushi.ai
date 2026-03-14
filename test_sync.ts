@@ -1,8 +1,9 @@
 import { auth } from './src/firebase.ts';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { performSync } from './src/services/sync_service.ts';
-import { db as firestoreDb } from './src/firebase.ts';
+import { db as firestoreDb, storage } from './src/firebase.ts';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { ref, getBytes } from 'firebase/storage';
 
 async function testSync() {
     console.log("Starting test for y_yanagimachi...");
@@ -19,13 +20,24 @@ async function testSync() {
         // 3. Attempt Sync Download
         console.log(`Attempting performSync for UID: ${uid}...`);
 
-        // Listen to events
-        window.addEventListener('sync-start', () => console.log("Event: sync-start"));
-        window.addEventListener('sync-success', () => console.log("Event: sync-success"));
-        window.addEventListener('sync-error', (e: any) => console.log("Event: sync-error", e.detail));
+        // instead of calling performSync which relies on browser indexedDB,
+        // let's manually fetch the storage object just to read what's inside it!
 
-        await performSync(uid);
-        console.log("performSync completed without throwing!");
+        const storageRef = ref(storage, `accounting-backups/${uid}/database_backup.json`);
+        const arrayBuffer = await getBytes(storageRef);
+        const decoder = new TextDecoder('utf-8');
+        const jsonString = decoder.decode(arrayBuffer);
+        const remoteData = JSON.parse(jsonString);
+
+        console.log("=== REMOTE DATA DIAGNOSTICS ===");
+        console.log("Accounts count:", remoteData.accounts?.length || 0);
+        console.log("Journals count:", remoteData.journals?.length || 0);
+        console.log("Journal Lines count:", remoteData.journal_lines?.length || 0);
+        console.log("Ledger Entries count:", remoteData.ledger_entries?.length || 0);
+
+        if (remoteData.journals && remoteData.journals.length > 0) {
+            console.log("Sample Journal Date:", remoteData.journals[0].date);
+        }
 
     } catch (e: any) {
         console.error("Caught error during test:", e.message || e);

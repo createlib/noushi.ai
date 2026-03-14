@@ -3,13 +3,14 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, L
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import SyncIcon from '@mui/icons-material/Sync';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import dayjs from 'dayjs';
 import { useFiscalYear } from '../contexts/FiscalYearContext';
 import { useState } from 'react';
-import { performSync } from '../services/sync_service';
+import { forceUploadSync, performSync } from '../services/sync_service';
 import { auth } from '../firebase';
 
 const COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
@@ -23,6 +24,7 @@ export default function Home() {
     const settings = useLiveQuery(() => db.settings.get(1), []);
 
     const [isSyncing, setIsSyncing] = useState(false);
+    const [isForceUploading, setIsForceUploading] = useState(false);
 
     if (!journals || !journalLines || !accounts) return <Typography p={2}>Loading...</Typography>;
 
@@ -81,6 +83,25 @@ export default function Home() {
         }
     };
 
+    const handleForceUpload = async () => {
+        if (!settings?.useFirebaseSync) return;
+        const currentUser = auth.currentUser;
+        if (!currentUser) return alert('同期するにはログインが必要です。');
+
+        if (!window.confirm('【警告】この操作は、現在のこの端末に入っているデータで、クラウド上のバックアップを完全に上書きします。\n\n本当にクラウドへアップロードしてもよろしいですか？')) return;
+
+        setIsForceUploading(true);
+        try {
+            await forceUploadSync(currentUser.uid);
+            alert('クラウドへの上書き保存が完了しました。');
+        } catch (err) {
+            console.error('Force Upload error:', err);
+            alert('上書き保存に失敗しました。詳細: ' + (err as Error).message);
+        } finally {
+            setIsForceUploading(false);
+        }
+    };
+
     return (
         <Box p={{ xs: 1, sm: 2 }} pt={2}>
             <Box px={1} mb={3} display="flex" justifyContent="space-between" alignItems="flex-start">
@@ -92,8 +113,13 @@ export default function Home() {
                 </Box>
                 {settings?.useFirebaseSync && (
                     <Box display="flex" gap={1}>
+                        <Tooltip title="この端末のデータをクラウドへ上書きアップロード">
+                            <IconButton onClick={handleForceUpload} disabled={isSyncing || isForceUploading} color="warning" sx={{ bgcolor: 'warning.50' }}>
+                                {isForceUploading ? <CircularProgress size={24} /> : <CloudUploadIcon />}
+                            </IconButton>
+                        </Tooltip>
                         <Tooltip title="クラウドからデータをダウンロードして最新化">
-                            <IconButton onClick={handleSync} disabled={isSyncing} color="primary" sx={{ bgcolor: 'primary.50' }}>
+                            <IconButton onClick={handleSync} disabled={isSyncing || isForceUploading} color="primary" sx={{ bgcolor: 'primary.50' }}>
                                 {isSyncing ? <CircularProgress size={24} /> : <SyncIcon />}
                             </IconButton>
                         </Tooltip>
