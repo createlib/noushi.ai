@@ -78,7 +78,7 @@ export const Login: React.FC = () => {
                 <Box display="flex" flexDirection="column" alignItems="center" mb={4}>
                     <AccountCircleIcon sx={{ fontSize: 64, color: '#4338ca', mb: 2 }} />
                     <Typography variant="h5" fontWeight="bold" align="center" color="text.primary">
-                        SmartBiz Ledger
+                        AI脳死申告
                     </Typography>
                     <Typography variant="body2" color="text.secondary" align="center">
                         NOAHコミュニティのアカウントでログイン
