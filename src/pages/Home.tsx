@@ -141,21 +141,6 @@ export default function Home() {
     const avgMonthlyProfit = (income - expense) / activeMonths;
     const highestExpense = expenseData.length > 0 ? expenseData[0] : null;
     const costDependency = (highestExpense && income > 0) ? (highestExpense.value / income) * 100 : 0;
-
-    // Current Month Expenses for Budget Alerts
-    const currentMonthNum = new Date().getMonth() + 1;
-    const currentMonthExpenses: Record<string, number> = {};
-    yearLines.forEach(line => {
-        const j = journals.find(j => j.id === line.journal_id);
-        const acc = accounts.find(a => String(a.code || a.id) === String(line.account_id));
-        if (!j || !j.date || !acc || acc.type !== 'expense') return;
-
-        const monthNum = parseInt(j.date.substring(5, 7), 10);
-        if (monthNum === currentMonthNum) {
-            currentMonthExpenses[acc.name] = (currentMonthExpenses[acc.name] || 0) + line.debit;
-        }
-    });
-
     const handleSync = async () => {
         if (!settings?.useFirebaseSync) return;
         const currentUser = auth.currentUser;
@@ -357,7 +342,7 @@ export default function Home() {
                         {tabIndex === 3 && (
                             <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(2, 1fr)' }} gap={3} sx={{ p: 1 }}>
                                 <TaxSimulation income={income} expense={expense} taxReturnMethod={settings?.taxReturnMethod || 'white'} />
-                                <BudgetAlerts currentMonthExpenses={currentMonthExpenses} monthlyBudgets={settings?.monthlyBudgets || {}} currentMonthNum={currentMonthNum} />
+                                <BudgetAlerts monthlyBudgets={settings?.monthlyBudgets || {}} yearLines={yearLines} journals={yearJournals} accounts={accounts} />
                             </Box>
                         )}
                     </Paper>

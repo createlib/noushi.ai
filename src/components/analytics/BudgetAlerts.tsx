@@ -1,22 +1,54 @@
-
-import { Box, Typography, Card, CardContent, LinearProgress } from '@mui/material';
+import { useState } from 'react';
+import { Box, Typography, Card, CardContent, LinearProgress, FormControl, Select, MenuItem } from '@mui/material';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import type { JournalLine, Journal, Account } from '../../db/db';
 
 interface BudgetAlertsProps {
-    currentMonthExpenses: Record<string, number>;
     monthlyBudgets: Record<string, number>;
-    currentMonthNum: number;
+    yearLines: JournalLine[];
+    journals: Journal[];
+    accounts: Account[];
 }
 
-export default function BudgetAlerts({ currentMonthExpenses, monthlyBudgets, currentMonthNum }: BudgetAlertsProps) {
+export default function BudgetAlerts({ monthlyBudgets, yearLines, journals, accounts }: BudgetAlertsProps) {
+    const [targetMonth, setTargetMonth] = useState<number>(new Date().getMonth() + 1);
+
     const budgetKeys = Object.keys(monthlyBudgets).filter(k => monthlyBudgets[k] > 0);
+
+    const targetMonthExpenses: Record<string, number> = {};
+    if (budgetKeys.length > 0) {
+        yearLines.forEach(line => {
+            const j = journals.find(j => j.id === line.journal_id);
+            const acc = accounts.find(a => String(a.code || a.id) === String(line.account_id));
+            if (!j || !j.date || !acc || acc.type !== 'expense') return;
+
+            const monthNum = parseInt(j.date.substring(5, 7), 10);
+            if (monthNum === targetMonth) {
+                targetMonthExpenses[acc.name] = (targetMonthExpenses[acc.name] || 0) + line.debit;
+            }
+        });
+    }
 
     return (
         <Card elevation={0} sx={{ border: '1px solid #e2e8f0', bgcolor: '#f8fafc', borderRadius: 2, height: '100%' }}>
             <CardContent>
-                <Box display="flex" alignItems="center" gap={1} mb={2}>
-                    <WarningAmberIcon color="warning" />
-                    <Typography variant="subtitle1" fontWeight="bold">{currentMonthNum}月の予算消化アラート</Typography>
+                <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                    <Box display="flex" alignItems="center" gap={1}>
+                        <WarningAmberIcon color="warning" />
+                        <Typography variant="subtitle1" fontWeight="bold">予算消化アラート</Typography>
+                    </Box>
+                    <FormControl size="small" variant="standard" sx={{ minWidth: 60 }}>
+                        <Select
+                            value={targetMonth}
+                            onChange={(e) => setTargetMonth(e.target.value as number)}
+                            disableUnderline
+                            sx={{ fontSize: '0.875rem', fontWeight: 'bold', color: 'primary.main' }}
+                        >
+                            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                                <MenuItem key={m} value={m}>{m}月</MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
                 </Box>
 
                 {budgetKeys.length === 0 ? (
@@ -27,7 +59,7 @@ export default function BudgetAlerts({ currentMonthExpenses, monthlyBudgets, cur
                     <Box display="flex" flexDirection="column" gap={3}>
                         {budgetKeys.map(category => {
                             const budget = monthlyBudgets[category];
-                            const spent = currentMonthExpenses[category] || 0;
+                            const spent = targetMonthExpenses[category] || 0;
                             const percentage = Math.min((spent / budget) * 100, 100);
 
                             let barColor: 'success' | 'warning' | 'error' = 'success';

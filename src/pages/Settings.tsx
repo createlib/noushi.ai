@@ -36,7 +36,12 @@ export default function Settings() {
 
     // Analytics Settings
     const [taxReturnMethod, setTaxReturnMethod] = useState<'blue' | 'white'>('white');
-    const [monthlyBudgets, setMonthlyBudgets] = useState<Record<string, number>>({});
+    const [budgetSelections, setBudgetSelections] = useState<{ name: string, amount: number | '' }[]>([
+        { name: '', amount: '' }, { name: '', amount: '' }, { name: '', amount: '' }, { name: '', amount: '' }, { name: '', amount: '' }
+    ]);
+
+    const allAccounts = useLiveQuery(() => db.accounts.toArray(), []);
+    const expenseAccounts = allAccounts?.filter(a => a.type === 'expense') || [];
 
     const navigate = useNavigate();
 
@@ -65,12 +70,23 @@ export default function Settings() {
                 });
             }
             if (currentSettings.taxReturnMethod) setTaxReturnMethod(currentSettings.taxReturnMethod);
-            if (currentSettings.monthlyBudgets) setMonthlyBudgets(currentSettings.monthlyBudgets);
+            if (currentSettings.monthlyBudgets) {
+                const arr: { name: string, amount: number | '' }[] = Object.entries(currentSettings.monthlyBudgets).map(([k, v]) => ({ name: k, amount: v as number }));
+                while (arr.length < 5) arr.push({ name: '', amount: '' });
+                setBudgetSelections(arr.slice(0, 5));
+            }
         }
     }, [currentSettings]);
 
     const handleSave = async () => {
         try {
+            const monthlyBudgetsRecord: Record<string, number> = {};
+            budgetSelections.forEach(item => {
+                if (item.name && item.amount !== '' && Number(item.amount) > 0) {
+                    monthlyBudgetsRecord[item.name] = Number(item.amount);
+                }
+            });
+
             const newSettings = {
                 geminiApiKey: apiKey,
                 aiModel,
@@ -78,7 +94,7 @@ export default function Settings() {
                 businessName,
                 businessType,
                 taxReturnMethod,
-                monthlyBudgets
+                monthlyBudgets: monthlyBudgetsRecord
             };
 
             // 1. Save locally to IndexedDB
@@ -303,21 +319,40 @@ export default function Settings() {
 
                     <Typography variant="subtitle2" gutterBottom>経費の月間目標予算 (予算消化アラート用)</Typography>
                     <Typography variant="body2" color="text.secondary" gutterBottom>
-                        使いすぎを防ぎたい主要な経費科目の1ヶ月あたりの予算上限（円）を設定してください。
+                        使いすぎを防ぎたい主要な経費科目を最大5つまで選択し、1ヶ月あたりの予算上限（円）を設定してください。
                     </Typography>
-                    {['接待交際費', '旅費交通費', '消耗品費', '広告宣伝費'].map(category => (
-                        <TextField
-                            key={category}
-                            label={`${category} (月額)`}
-                            type="number"
-                            fullWidth
-                            margin="normal"
-                            value={monthlyBudgets[category] || ''}
-                            onChange={(e) => setMonthlyBudgets({
-                                ...monthlyBudgets,
-                                [category]: Number(e.target.value)
-                            })}
-                        />
+                    {budgetSelections.map((selection, index) => (
+                        <Box key={index} display="flex" gap={2} mb={2} alignItems="center">
+                            <TextField
+                                select
+                                label={`アラート科目 ${index + 1}`}
+                                value={selection.name}
+                                onChange={(e) => {
+                                    const newSelections = [...budgetSelections];
+                                    newSelections[index] = { ...newSelections[index], name: e.target.value };
+                                    setBudgetSelections(newSelections);
+                                }}
+                                fullWidth
+                                disabled={expenseAccounts.length === 0}
+                            >
+                                <MenuItem value=""><em>-- 選択なし --</em></MenuItem>
+                                {expenseAccounts.map(acc => (
+                                    <MenuItem key={acc.id} value={acc.name}>{acc.name}</MenuItem>
+                                ))}
+                            </TextField>
+                            <TextField
+                                label="予算上限 (円)"
+                                type="number"
+                                value={selection.amount}
+                                onChange={(e) => {
+                                    const newSelections = [...budgetSelections];
+                                    newSelections[index] = { ...newSelections[index], amount: e.target.value === '' ? '' : Number(e.target.value) };
+                                    setBudgetSelections(newSelections);
+                                }}
+                                fullWidth
+                                disabled={!selection.name}
+                            />
+                        </Box>
                     ))}
 
                     <Box mt={3} mb={1}>

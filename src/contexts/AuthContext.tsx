@@ -53,7 +53,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         console.log("🔥 Extracted membershipRank:", data.membershipRank, "userId:", data.userId);
 
                         // Sync settings to local DB if available
-                        if (data.geminiApiKey !== undefined || data.aiModel !== undefined || data.useFirebaseSync !== undefined || data.businessName !== undefined || data.businessType !== undefined) {
+                        if (data.geminiApiKey !== undefined || data.aiModel !== undefined || data.useFirebaseSync !== undefined || data.businessName !== undefined || data.businessType !== undefined || data.taxReturnMethod !== undefined || data.monthlyBudgets !== undefined) {
                             try {
                                 const localSettings = await localDb.settings.get(1);
                                 if (localSettings) {
@@ -63,6 +63,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                                         useFirebaseSync: data.useFirebaseSync !== undefined ? data.useFirebaseSync : localSettings.useFirebaseSync,
                                         businessName: data.businessName !== undefined ? data.businessName : localSettings.businessName,
                                         businessType: data.businessType !== undefined ? data.businessType : localSettings.businessType,
+                                        taxReturnMethod: data.taxReturnMethod !== undefined ? data.taxReturnMethod : localSettings.taxReturnMethod,
+                                        monthlyBudgets: data.monthlyBudgets !== undefined ? data.monthlyBudgets : localSettings.monthlyBudgets,
                                     });
                                 } else {
                                     await localDb.settings.add({
@@ -71,10 +73,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                                         aiModel: data.aiModel || 'gemini-2.5-flash',
                                         useFirebaseSync: data.useFirebaseSync || false,
                                         businessName: data.businessName || '',
-                                        businessType: data.businessType || {}
+                                        businessType: data.businessType || {},
+                                        taxReturnMethod: data.taxReturnMethod || 'white',
+                                        monthlyBudgets: data.monthlyBudgets || {}
                                     });
                                 }
-                                console.log("🔥 Synced API, Sync, and Business settings to IndexedDB.");
+                                console.log("🔥 Synced API, Sync, Business, and Analytics settings to IndexedDB.");
 
                                 // Auto-sync on load if enabled
                                 const isSyncEnabled = data.useFirebaseSync !== undefined ? data.useFirebaseSync : localSettings?.useFirebaseSync;
