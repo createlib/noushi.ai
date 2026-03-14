@@ -1,27 +1,19 @@
-import React, { useState } from 'react';
-import { Box, Typography, Button, CircularProgress } from '@mui/material';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import { createRoot } from 'react-dom/client';
-import { flushSync } from 'react-dom';
-import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import React from 'react';
+import { Box, Typography, Button } from '@mui/material';
+import PrintIcon from '@mui/icons-material/Print';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 
-export const JournalPdfExporter: React.FC<{ transactions: any[], accounts: any[], selectedYear: number }> = ({ transactions, accounts, selectedYear }) => {
-    const [isGenerating, setIsGenerating] = useState(false);
+export const JournalPrintExporter: React.FC<{ transactions: any[], accounts: any[], selectedYear: number }> = ({ transactions, accounts, selectedYear }) => {
     const settings = useLiveQuery(() => db.settings.get(1), []);
     const businessName = settings?.businessName || '';
 
-    // Build pages
     const pages: any[] = [];
-    const maxRowsPerPage = 14; // Fit portrait A4 without bottom crop
+    const maxRowsPerPage = 18;
 
-    // Prepare flat rows from transactions
     const rows: any[] = [];
     let no = 1;
 
-    // Sort transactions by date ascending for the journal
     const sortedTransactions = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     sortedTransactions.forEach(t => {
@@ -48,7 +40,6 @@ export const JournalPdfExporter: React.FC<{ transactions: any[], accounts: any[]
         }
     });
 
-    // Chunk into pages
     for (let i = 0; i < rows.length; i += maxRowsPerPage) {
         pages.push({
             pageIdx: Math.floor(i / maxRowsPerPage) + 1,
@@ -57,142 +48,98 @@ export const JournalPdfExporter: React.FC<{ transactions: any[], accounts: any[]
         });
     }
 
-    const handleGeneratePdf = async () => {
-        setIsGenerating(true);
-        // Create a temporary detached container for rendering single pages
-        const tempContainer = document.createElement('div');
-        tempContainer.style.position = 'absolute';
-        tempContainer.style.top = '-9999px';
-        tempContainer.style.left = '-9999px';
-        document.body.appendChild(tempContainer);
+    const handlePrint = () => {
+        const printContent = document.getElementById('journal-print-area');
+        if (!printContent) return;
 
-        const root = createRoot(tempContainer);
+        const originalContents = document.body.innerHTML;
+        document.body.innerHTML = printContent.innerHTML;
 
-        try {
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
+        window.print();
 
-            for (let i = 0; i < pages.length; i++) {
-                const pageData = pages[i];
-
-                // Synchronously render exactly one page into the DOM
-                flushSync(() => {
-                    root.render(
-                        <Box
-                            id="pdf-render-target"
-                            sx={{
-                                width: '210mm', // A4 Portrait
-                                minHeight: '297mm',
-                                padding: '15mm 20mm 20mm 20mm', // Safe margins
-                                bgcolor: 'white',
-                                color: 'black',
-                                fontFamily: '"MS Mincho", serif',
-                                boxSizing: 'border-box'
-                            }}
-                        >
-                            <Box display="flex" justifyContent="space-between" alignItems="flex-end" mb={2}>
-                                <Typography variant="h4" fontWeight="bold" color="#1e3a8a">仕訳帳 ({selectedYear}年)</Typography>
-                                <Box textAlign="right">
-                                    {businessName && <Typography variant="subtitle1" fontWeight="bold" color="#475569">{businessName}</Typography>}
-                                    <Typography variant="body1" color="text.secondary">
-                                        ページ: {pageData.pageIdx} / {pageData.totalPages}
-                                    </Typography>
-                                </Box>
-                            </Box>
-
-                            <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid #1e3a8a', fontSize: '13px' }}>
-                                <thead>
-                                    <tr style={{ backgroundColor: '#eff6ff', borderBottom: '2px solid #1e3a8a' }}>
-                                        <th style={{ padding: '8px', borderRight: '1px solid #93c5fd', width: '14%', color: '#1e3a8a', whiteSpace: 'nowrap' }}>日付</th>
-                                        <th style={{ padding: '8px', borderRight: '1px solid #93c5fd', width: '5%', color: '#1e3a8a' }}>No.</th>
-                                        <th style={{ padding: '8px', borderRight: '1px solid #93c5fd', width: '16%', color: '#1e3a8a' }}>借方科目</th>
-                                        <th style={{ padding: '8px', borderRight: '1px solid #93c5fd', width: '13%', color: '#1e3a8a' }}>借方金額</th>
-                                        <th style={{ padding: '8px', borderRight: '1px solid #93c5fd', width: '16%', color: '#1e3a8a' }}>貸方科目</th>
-                                        <th style={{ padding: '8px', borderRight: '1px solid #93c5fd', width: '13%', color: '#1e3a8a' }}>貸方金額</th>
-                                        <th style={{ padding: '8px', width: '23%', color: '#1e3a8a' }}>摘要</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {pageData.rows.map((r: any, rIdx: number) => {
-                                        const isNewTransaction = r.no !== '';
-                                        const bgColor = isNewTransaction && r.no % 2 === 0 ? '#f8fafc' : 'white';
-                                        const topBorder = isNewTransaction ? '1px solid #93c5fd' : 'none';
-
-                                        return (
-                                            <tr key={rIdx} style={{ backgroundColor: bgColor, borderTop: topBorder }}>
-                                                <td style={{ padding: '8px', borderRight: '1px solid #93c5fd', textAlign: 'center' }}>{r.date}</td>
-                                                <td style={{ padding: '8px', borderRight: '1px solid #93c5fd', textAlign: 'center', color: '#64748b' }}>{r.no}</td>
-                                                <td style={{ padding: '8px', borderRight: '1px solid #93c5fd' }}>{r.debName}</td>
-                                                <td style={{ padding: '8px', borderRight: '1px solid #93c5fd', textAlign: 'right', color: '#059669', fontWeight: r.debAmount ? 'bold' : 'normal' }}>
-                                                    {r.debAmount ? r.debAmount.toLocaleString() : ''}
-                                                </td>
-                                                <td style={{ padding: '8px', borderRight: '1px solid #93c5fd' }}>{r.creName}</td>
-                                                <td style={{ padding: '8px', borderRight: '1px solid #93c5fd', textAlign: 'right', color: '#ea580c', fontWeight: r.creAmount ? 'bold' : 'normal' }}>
-                                                    {r.creAmount ? r.creAmount.toLocaleString() : ''}
-                                                </td>
-                                                <td style={{ padding: '8px', color: '#334155' }}>{r.desc}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </Box>
-                    );
-                });
-
-                // Allow DOM to paint thoroughly
-                await new Promise(resolve => setTimeout(resolve, 50));
-
-                const element = tempContainer.querySelector('#pdf-render-target') as HTMLElement;
-                if (!element) continue;
-
-                const canvas = await html2canvas(element, { scale: 2 });
-                const imgData = canvas.toDataURL('image/png');
-
-                if (i > 0) pdf.addPage();
-
-                const imgRatio = canvas.height / canvas.width;
-                const pdfRatio = pdfHeight / pdfWidth;
-
-                let finalW = pdfWidth;
-                let finalH = pdfWidth * imgRatio;
-                if (imgRatio > pdfRatio) {
-                    finalH = pdfHeight;
-                    finalW = pdfHeight / imgRatio;
-                }
-
-                pdf.addImage(imgData, 'PNG', 0, 0, finalW, finalH);
-            }
-
-            pdf.save(`Journal_${selectedYear}.pdf`);
-        } catch (error) {
-            console.error("PDF generation failed", error);
-        } finally {
-            root.unmount();
-            document.body.removeChild(tempContainer);
-            setIsGenerating(false);
-        }
+        document.body.innerHTML = originalContents;
+        window.location.reload();
     };
 
-    try {
-        if (!transactions || transactions.length === 0) return null;
+    if (!transactions || transactions.length === 0 || pages.length === 0) return null;
 
-        return (
-            <React.Fragment>
-                <Button
-                    variant="contained"
-                    sx={{ bgcolor: 'white', color: 'error.main', border: '1px solid', borderColor: 'error.main', borderRadius: 8, '&:hover': { bgcolor: '#fef2f2' } }}
-                    startIcon={isGenerating ? <CircularProgress size={20} color="error" /> : <PictureAsPdfIcon />}
-                    onClick={handleGeneratePdf}
-                    disabled={isGenerating}
-                    disableElevation
-                >
-                    仕訳帳 (PDF){isGenerating ? ' 生成中...' : ''}
-                </Button>
-            </React.Fragment>
-        );
-    } catch (e: any) {
-        return <Typography color="error">Journal PDF Export Error: {e.message}</Typography>;
-    }
+    return (
+        <React.Fragment>
+            <Button
+                variant="contained"
+                sx={{ bgcolor: 'white', color: 'error.main', border: '1px solid', borderColor: 'error.main', borderRadius: 8, '&:hover': { bgcolor: '#fef2f2' } }}
+                startIcon={<PrintIcon color="error" />}
+                onClick={handlePrint}
+                disableElevation
+            >
+                仕訳帳PDF (超高速印刷)
+            </Button>
+
+            <Box id="journal-print-area" sx={{ display: 'none' }}>
+                <style>
+                    {`
+                    @media print {
+                        @page { size: A4 portrait; margin: 15mm; }
+                        body { margin: 0; padding: 0; font-family: "MS Mincho", serif; color: black; }
+                        .print-page { page-break-after: always; width: 100%; box-sizing: border-box; }
+                        .print-page:last-child { page-break-after: auto; }
+                        th { background-color: #eff6ff !important; color: #1e3a8a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    }
+                    `}
+                </style>
+
+                {pages.map((pageData, index) => (
+                    <Box key={index} className="print-page">
+                        <Box display="flex" justifyContent="space-between" alignItems="flex-end" mb={2}>
+                            <Typography variant="h5" fontWeight="bold" color="#1e3a8a">仕訳帳 ({selectedYear}年)</Typography>
+                            <Box textAlign="right">
+                                {businessName && <Typography variant="subtitle1" fontWeight="bold" color="#475569">{businessName}</Typography>}
+                                <Typography variant="body1" color="text.secondary">
+                                    ページ: {pageData.pageIdx} / {pageData.totalPages}
+                                </Typography>
+                            </Box>
+                        </Box>
+
+                        <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid #1e3a8a', fontSize: '13px' }}>
+                            <thead>
+                                <tr style={{ backgroundColor: '#eff6ff', borderBottom: '2px solid #1e3a8a' }}>
+                                    <th style={{ padding: '8px', borderRight: '1px solid #93c5fd', width: '14%', color: '#1e3a8a', whiteSpace: 'nowrap' }}>日付</th>
+                                    <th style={{ padding: '8px', borderRight: '1px solid #93c5fd', width: '5%', color: '#1e3a8a' }}>No.</th>
+                                    <th style={{ padding: '8px', borderRight: '1px solid #93c5fd', width: '16%', color: '#1e3a8a' }}>借方科目</th>
+                                    <th style={{ padding: '8px', borderRight: '1px solid #93c5fd', width: '13%', color: '#1e3a8a' }}>借方金額</th>
+                                    <th style={{ padding: '8px', borderRight: '1px solid #93c5fd', width: '16%', color: '#1e3a8a' }}>貸方科目</th>
+                                    <th style={{ padding: '8px', borderRight: '1px solid #93c5fd', width: '13%', color: '#1e3a8a' }}>貸方金額</th>
+                                    <th style={{ padding: '8px', width: '23%', color: '#1e3a8a' }}>摘要</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {pageData.rows.map((r: any, rIdx: number) => {
+                                    const isNewTransaction = r.no !== '';
+                                    const bgColor = isNewTransaction && r.no % 2 === 0 ? '#f8fafc' : 'white';
+                                    const topBorder = isNewTransaction ? '1px solid #93c5fd' : 'none';
+
+                                    return (
+                                        <tr key={rIdx} style={{ backgroundColor: bgColor, borderTop: topBorder }}>
+                                            <td style={{ padding: '8px', borderRight: '1px solid #93c5fd', textAlign: 'center' }}>{r.date}</td>
+                                            <td style={{ padding: '8px', borderRight: '1px solid #93c5fd', textAlign: 'center', color: '#64748b' }}>{r.no}</td>
+                                            <td style={{ padding: '8px', borderRight: '1px solid #93c5fd' }}>{r.debName}</td>
+                                            <td style={{ padding: '8px', borderRight: '1px solid #93c5fd', textAlign: 'right', color: '#059669', fontWeight: r.debAmount ? 'bold' : 'normal' }}>
+                                                {r.debAmount ? r.debAmount.toLocaleString() : ''}
+                                            </td>
+                                            <td style={{ padding: '8px', borderRight: '1px solid #93c5fd' }}>{r.creName}</td>
+                                            <td style={{ padding: '8px', borderRight: '1px solid #93c5fd', textAlign: 'right', color: '#ea580c', fontWeight: r.creAmount ? 'bold' : 'normal' }}>
+                                                {r.creAmount ? r.creAmount.toLocaleString() : ''}
+                                            </td>
+                                            <td style={{ padding: '8px', color: '#334155' }}>{r.desc}</td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </Box>
+                ))}
+            </Box>
+        </React.Fragment>
+    );
 };
