@@ -1496,5 +1496,12 @@
     "name": "期末仕掛品棚卸高",
     "type": "expense",
     "tax_type": "taxable10"
+  },
+  {
+    "id": 9999,
+    "code": 9999,
+    "name": "不明",
+    "type": "expense",
+    "tax_type": "taxable10"
   }
 ]

@@ -13,14 +13,20 @@ import { AccountAutocomplete } from '../components/AccountAutocomplete';
 
 
 export default function CameraInput() {
-    const { cameraQueue: queue, addCameraItems, removeCameraItem, retryCameraItem } = useAnalysis();
-    const [reviewingId, setReviewingId] = useState<string | null>(null);
+    const {
+        cameraQueue, addCameraItems, removeCameraItem, retryCameraItem,
+        csvQueue, addCsvItems, removeCsvItem, retryCsvItem
+    } = useAnalysis();
+
+    // We will use a unified reviewing item that could be from either queue.
+    const [reviewingItem, setReviewingItem] = useState<{ id: string, type: 'camera' | 'csv' } | null>(null);
     const [successMsg, setSuccessMsg] = useState('');
     const [editingResult, setEditingResult] = useState<AIResult | null>(null);
     const [isSaving, setIsSaving] = useState(false);
 
     const cameraInputRef = useRef<HTMLInputElement>(null);
     const galleryInputRef = useRef<HTMLInputElement>(null);
+    const csvInputRef = useRef<HTMLInputElement>(null);
     const accounts = useLiveQuery(() => db.accounts.toArray(), []) || [];
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,30 +52,55 @@ export default function CameraInput() {
         event.target.value = '';
     };
 
+    const handleCsvFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const text = reader.result as string;
+            const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+
+            const newItems = lines.map(line => ({
+                id: crypto.randomUUID(),
+                originalRow: line,
+                status: 'pending' as const
+            }));
+
+            addCsvItems(newItems);
+        };
+        // Typically Shift_JIS for Japanese banking CSVs
+        reader.readAsText(file, 'Shift_JIS');
+
+        if (csvInputRef.current) csvInputRef.current.value = '';
+    };
+
     const handleRetry = (item: CameraQueueItem) => {
         retryCameraItem(item.id);
     };
 
-    const handleRemove = (id: string) => {
-        removeCameraItem(id);
+    const handleRemove = (id: string, type: 'camera' | 'csv') => {
+        if (type === 'camera') removeCameraItem(id);
+        else removeCsvItem(id);
     };
 
-    const openReview = (item: CameraQueueItem) => {
+    const openReview = (item: any, type: 'camera' | 'csv') => {
         if (item.result) {
-            setReviewingId(item.id);
-            // 深いコピーを作成
+            setReviewingItem({ id: item.id, type });
             setEditingResult(JSON.parse(JSON.stringify(item.result)));
         }
     };
 
     const closeReview = () => {
-        setReviewingId(null);
+        setReviewingItem(null);
         setEditingResult(null);
     };
 
     const handleSave = async () => {
-        if (!editingResult || !reviewingId || isSaving) return;
-        const currentItem = queue.find(q => q.id === reviewingId);
+        if (!editingResult || !reviewingItem || isSaving) return;
+
+        const queueToSearch = reviewingItem.type === 'camera' ? cameraQueue : csvQueue;
+        const currentItem = queueToSearch.find(q => q.id === reviewingItem.id);
         if (!currentItem) return;
 
         setIsSaving(true);
@@ -124,7 +155,7 @@ export default function CameraInput() {
 
             // UIを即座に解放
             setSuccessMsg('仕訳を登録しました');
-            handleRemove(reviewingId);
+            handleRemove(reviewingItem.id, reviewingItem.type);
             closeReview();
             setIsSaving(false);
 
@@ -168,47 +199,51 @@ export default function CameraInput() {
 
     return (
         <Box p={{ xs: 1, sm: 2 }} pt={2}>
-            <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', mb: 3, px: 1 }}>一括レシート読取</Typography>
-
-            <Paper elevation={0} sx={{ p: 3, textAlign: 'center', mb: 4, borderRadius: 4, border: '2px dashed', borderColor: 'primary.light', bgcolor: '#f0f9ff' }}>
+            <Paper elevation={0} sx={{ p: 4, textAlign: 'center', mb: 4, borderRadius: 4, border: '2px dashed', borderColor: 'primary.light', bgcolor: '#f0fdf4' }}>
                 <Box mb={2} color="primary.main">
-                    <CameraAlt sx={{ fontSize: 48, opacity: 0.9 }} />
+                    <CameraAlt sx={{ fontSize: 40, opacity: 0.9, mr: 2 }} />
+                    <UploadFile sx={{ fontSize: 40, opacity: 0.9 }} />
                 </Box>
-                <Typography variant="subtitle1" gutterBottom fontWeight="bold" color="primary.dark">レシートを連続撮影</Typography>
-                <Typography variant="body2" color="text.secondary" mb={3}>
-                    撮影した画像はバックグラウンドで順次解析されます。解析完了後、個別に確認して登録できます。
+                <Typography variant="h6" gutterBottom fontWeight="bold" color="primary.dark">AIによる自動仕訳解析</Typography>
+                <Typography variant="body2" color="text.secondary" mb={4}>
+                    レシート写真の中身や、クレジットカード・ネット銀行の明細CSVファイルをAIが読み解き、自動で仕訳を生成します。
                 </Typography>
 
                 <Box display="flex" gap={2} justifyContent="center" flexWrap="wrap">
                     <Button
-                        variant="contained"
-                        size="large"
-                        startIcon={<CameraAlt />}
-                        onClick={() => cameraInputRef.current?.click()}
-                        sx={{ borderRadius: 8, px: 4, py: 1.2 }}
-                        disableElevation
+                        variant="contained" size="large" disableElevation
+                        startIcon={<CameraAlt />} onClick={() => cameraInputRef.current?.click()}
+                        sx={{ borderRadius: 8, px: 3, py: 1 }}
                     >
-                        カメラを起動
+                        カメラで撮影
                     </Button>
                     <Button
-                        variant="outlined"
-                        size="large"
-                        startIcon={<UploadFile />}
-                        onClick={() => galleryInputRef.current?.click()}
-                        sx={{ borderRadius: 8, px: 4, py: 1.2, bgcolor: 'white' }}
+                        variant="outlined" size="large" disableElevation
+                        startIcon={<UploadFile />} onClick={() => galleryInputRef.current?.click()}
+                        sx={{ borderRadius: 8, px: 3, py: 1, bgcolor: 'white' }}
                     >
                         写真を選択
+                    </Button>
+                    <Button
+                        variant="outlined" size="large" disableElevation
+                        startIcon={<UploadFile />} onClick={() => csvInputRef.current?.click()}
+                        sx={{ borderRadius: 8, px: 3, py: 1, bgcolor: 'white' }}
+                    >
+                        CSV(明細)を選択
                     </Button>
                 </Box>
                 <input type="file" accept="image/*" capture="environment" multiple ref={cameraInputRef} style={{ display: 'none' }} onChange={handleFileChange} />
                 <input type="file" accept="image/*" multiple ref={galleryInputRef} style={{ display: 'none' }} onChange={handleFileChange} />
+                <input type="file" accept=".csv,text/csv" ref={csvInputRef} style={{ display: 'none' }} onChange={handleCsvFileChange} />
             </Paper>
 
-            {queue.length > 0 && (
+            {(cameraQueue.length > 0 || csvQueue.length > 0) && (
                 <Box>
-                    <Typography variant="h6" fontWeight="bold" mb={2} px={1}>読取リスト ({queue.length}件)</Typography>
+                    <Typography variant="h6" fontWeight="bold" mb={2} px={1}>AI解析リスト ({cameraQueue.length + csvQueue.length}件)</Typography>
                     <Box display="flex" flexDirection="column" gap={2}>
-                        {queue.map(item => (
+
+                        {/* 1. Camera Queue */}
+                        {cameraQueue.map(item => (
                             <Card key={item.id} elevation={0} sx={{ display: 'flex', border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
                                 <CardMedia component="img" sx={{ width: 100, objectFit: 'cover' }} image={item.imagePreview} alt="Receipt thumbnail" />
                                 <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', p: 2, '&:last-child': { pb: 2 } }}>
@@ -223,7 +258,7 @@ export default function CameraInput() {
                                             {item.status === 'success' && (
                                                 <>
                                                     <CheckCircle color="success" fontSize="small" />
-                                                    <Typography variant="body2" color="success.main" fontWeight="bold">解析完了</Typography>
+                                                    <Typography variant="body2" color="success.main" fontWeight="bold">画像解析完了</Typography>
                                                     <Typography variant="caption" color="text.secondary" ml={1}>
                                                         ¥{item.result?.debits.reduce((sum: number, d: { amount: number }) => sum + d.amount, 0).toLocaleString()}
                                                     </Typography>
@@ -236,14 +271,14 @@ export default function CameraInput() {
                                                 </>
                                             )}
                                         </Box>
-                                        <IconButton size="small" onClick={() => handleRemove(item.id)} sx={{ color: 'text.secondary' }}>
+                                        <IconButton size="small" onClick={() => handleRemove(item.id, 'camera')} sx={{ color: 'text.secondary' }}>
                                             <Close fontSize="small" />
                                         </IconButton>
                                     </Box>
 
                                     <Box mt={2}>
                                         {item.status === 'success' && (
-                                            <Button variant="contained" size="small" onClick={() => openReview(item)} disableElevation sx={{ borderRadius: 4 }}>
+                                            <Button variant="contained" size="small" onClick={() => openReview(item, 'camera')} disableElevation sx={{ borderRadius: 4 }}>
                                                 確認して登録
                                             </Button>
                                         )}
@@ -256,15 +291,80 @@ export default function CameraInput() {
                                 </CardContent>
                             </Card>
                         ))}
+
+                        {/* 2. CSV Queue */}
+                        {csvQueue.map(item => (
+                            <Card key={item.id} elevation={0} sx={{ display: 'flex', border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                                <Box sx={{ width: 100, bgcolor: '#f1f5f9', display: 'flex', alignItems: 'center', p: 1, borderRight: '1px solid #e2e8f0' }}>
+                                    <Typography variant="caption" sx={{ wordBreak: 'break-all', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                        {item.originalRow.substring(0, 50)}...
+                                    </Typography>
+                                </Box>
+                                <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', p: 2, '&:last-child': { pb: 2 } }}>
+                                    <Box display="flex" justifyContent="space-between" alignItems="center">
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                            {(item.status === 'pending' || item.status === 'analyzing') && (
+                                                <>
+                                                    <CircularProgress size={20} />
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        {item.status === 'pending' ? '待機中...' : 'AI解析中...'}
+                                                    </Typography>
+                                                </>
+                                            )}
+                                            {item.status === 'success' && (
+                                                <>
+                                                    <CheckCircle color="success" fontSize="small" />
+                                                    <Typography variant="body2" color="success.main" fontWeight="bold">CSV解析完了</Typography>
+                                                    <Typography variant="caption" color="text.secondary" ml={1}>
+                                                        ¥{item.result?.debits.reduce((sum: number, d: { amount: number }) => sum + d.amount, 0).toLocaleString()}
+                                                    </Typography>
+                                                </>
+                                            )}
+                                            {item.status === 'skipped' && (
+                                                <Typography variant="body2" color="text.secondary">スキップ (私的利用など)</Typography>
+                                            )}
+                                            {item.status === 'error' && (
+                                                <>
+                                                    <ErrorOutline color="error" fontSize="small" />
+                                                    <Typography variant="body2" color="error.main">{item.errorMsg}</Typography>
+                                                </>
+                                            )}
+                                        </Box>
+                                        <IconButton size="small" onClick={() => handleRemove(item.id, 'csv')} sx={{ color: 'text.secondary' }}>
+                                            <Close fontSize="small" />
+                                        </IconButton>
+                                    </Box>
+
+                                    <Box mt={2}>
+                                        {item.status === 'success' && (
+                                            <Button variant="contained" size="small" onClick={() => openReview(item, 'csv')} disableElevation sx={{ borderRadius: 4 }}>
+                                                確認して登録
+                                            </Button>
+                                        )}
+                                        {item.status === 'error' && (
+                                            <Button variant="outlined" color="error" size="small" onClick={() => retryCsvItem(item.id)} sx={{ borderRadius: 4 }}>
+                                                再解析
+                                            </Button>
+                                        )}
+                                    </Box>
+                                </CardContent>
+                            </Card>
+                        ))}
                     </Box>
                 </Box>
             )}
 
-            <Dialog open={!!reviewingId} onClose={closeReview} maxWidth="md" fullWidth>
-                {editingResult && (
+            <Dialog open={!!reviewingItem} onClose={closeReview} maxWidth="md" fullWidth>
+                {editingResult && reviewingItem && (
                     <Box display="flex" flexDirection={{ xs: 'column', md: 'row' }}>
-                        <Box flex={1} bgcolor="#000" display="flex" justifyContent="center" alignItems="center" minHeight={{ xs: 200, md: 'auto' }}>
-                            <img src={queue.find(q => q.id === reviewingId)?.imagePreview} alt="Receipt" style={{ maxWidth: '100%', maxHeight: '60vh', objectFit: 'contain' }} />
+                        <Box flex={1} bgcolor={reviewingItem?.type === 'camera' ? "#000" : "#f1f5f9"} display="flex" justifyContent="center" alignItems="center" minHeight={{ xs: 200, md: 'auto' }} p={2}>
+                            {reviewingItem?.type === 'camera' ? (
+                                <img src={cameraQueue.find(q => q.id === reviewingItem.id)?.imagePreview} alt="Receipt" style={{ maxWidth: '100%', maxHeight: '60vh', objectFit: 'contain' }} />
+                            ) : (
+                                <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
+                                    {csvQueue.find(q => q.id === reviewingItem.id)?.originalRow}
+                                </Typography>
+                            )}
                         </Box>
                         <Box flex={1} p={{ xs: 2, sm: 3 }} sx={{ overflowY: 'auto', maxHeight: { xs: 'auto', md: '80vh' } }}>
                             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>

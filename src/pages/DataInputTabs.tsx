@@ -41,8 +41,8 @@ export default function DataInputTabs() {
         <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'white' }}>
                 <Tabs value={value} onChange={handleChange} variant="fullWidth" textColor="primary" indicatorColor="primary">
-                    <Tab label={<Typography fontWeight="bold">レシート撮影</Typography>} />
-                    <Tab label={<Typography fontWeight="bold">CSVインポート</Typography>} />
+                    <Tab label={<Typography fontWeight="bold" sx={{ fontSize: { xs: '0.75rem', sm: '1rem' } }}>AI解析<br /><span style={{ fontSize: '0.65rem', fontWeight: 'normal' }}>(写真 / 画像 / 取引CSV)</span></Typography>} />
+                    <Tab label={<Typography fontWeight="bold" sx={{ fontSize: { xs: '0.75rem', sm: '1rem' } }}>一括CSVインポート<br /><span style={{ fontSize: '0.65rem', fontWeight: 'normal' }}>(AI解析なし固定形式)</span></Typography>} />
                 </Tabs>
             </Box>
             <Box flex={1}>

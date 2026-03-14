@@ -8,7 +8,19 @@ import { signOut } from 'firebase/auth';
 export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { user, loading, hasAccess } = useAuth();
 
-    if (loading) {
+    const [showError, setShowError] = React.useState(false);
+
+    React.useEffect(() => {
+        let timer: number;
+        if (!loading && user && !hasAccess) {
+            timer = window.setTimeout(() => setShowError(true), 500);
+        } else {
+            setShowError(false);
+        }
+        return () => clearTimeout(timer);
+    }, [loading, user, hasAccess]);
+
+    if (loading || (!hasAccess && !showError && user)) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
                 <CircularProgress />
