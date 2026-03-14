@@ -65,6 +65,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                                     });
                                 }
                                 console.log("🔥 Synced API & Sync settings to IndexedDB.");
+
+                                // Auto-sync on load if enabled
+                                const isSyncEnabled = data.useFirebaseSync !== undefined ? data.useFirebaseSync : localSettings?.useFirebaseSync;
+                                if (isSyncEnabled) {
+                                    console.log("🔥 Auto-syncing from Firebase Storage...");
+                                    const { performSync } = await import('../services/sync_service');
+                                    performSync(currentUser.uid).catch(e => console.error("Auto sync failed during init:", e));
+                                }
                             } catch (syncErr) {
                                 console.error("Failed to sync settings to local DB", syncErr);
                             }
