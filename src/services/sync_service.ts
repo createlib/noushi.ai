@@ -1,6 +1,6 @@
 import { db, type Account, type Journal, type JournalLine, type LedgerEntry, type FiscalPeriod } from '../db/db';
 import { storage } from '../firebase';
-import { ref, uploadString, getBytes } from 'firebase/storage';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 
 export interface SyncDataPayload {
     accounts: Account[];
@@ -43,135 +43,72 @@ export async function forceUploadSync(uid: string): Promise<void> {
 }
 
 /**
- * Firebase Storageから直近のバックアップをダウンロードし、
- * ローカルDBと Last-Write-Wins 方式でマージします。
- * 完了後、綺麗な状態を再度 Storage にアップロードします。
+ * Firebase Storageから最新のバックアップをダウンロードし、
+ * ローカルDBを完全にそれで上書き（同期）します。
  */
 export async function performSync(uid: string): Promise<void> {
     if (!uid) throw new Error("ユーザーがログインしていません。");
 
     window.dispatchEvent(new CustomEvent('sync-start'));
-
     const storageRef = ref(storage, `accounting-backups/${uid}/database_backup.json`);
 
     let remoteData: SyncDataPayload | null = null;
     try {
-        // fetchの代わりにFirebase SDKのgetBytesを使用（CORS回避と確実な取得）
-        const arrayBuffer = await getBytes(storageRef);
-        const decoder = new TextDecoder('utf-8');
-        const jsonString = decoder.decode(arrayBuffer);
-        remoteData = JSON.parse(jsonString);
+        const url = await getDownloadURL(storageRef);
+        // ブラウザのキャッシュを回避
+        const resp = await fetch(url + `&_t=${Date.now()}`, {
+            cache: 'no-store'
+        });
+        if (resp.ok) {
+            remoteData = await resp.json();
+        } else {
+            throw new Error(`Failed to download backup: ${resp.status}`);
+        }
     } catch (e: any) {
         if (e.code === 'storage/unauthorized') {
             window.dispatchEvent(new CustomEvent('sync-error', { detail: '権限エラー' }));
             throw new Error('Firebase Storageの権限エラーです。Storageルールに accounting-backups フォルダへのアクセス・読み取り許可を追加してください。');
         }
-        console.log("No remote backup found. Assuming first-time sync:", e);
+        if (e.code === 'storage/object-not-found') {
+            window.dispatchEvent(new CustomEvent('sync-error', { detail: 'データなし' }));
+            throw new Error(`このアカウントのクラウドデータが見つかりません。
+・PCと別のアカウント（Google/Apple等）でログインしている可能性があります。
+・設定画面のアカウント欄から、PCと同じIDでログインし直してください。`);
+        }
+        window.dispatchEvent(new CustomEvent('sync-error', { detail: '取得エラー' }));
+        throw new Error('クラウドからのデータ取得に失敗しました: ' + (e.message || ''));
     }
 
     if (!remoteData) {
-        // リモートデータがない場合は、現在のローカルデータをアップロードして終了
-        await forceUploadSync(uid);
-        return;
+        window.dispatchEvent(new CustomEvent('sync-error', { detail: 'データが空' }));
+        throw new Error("取得したデータが空でした。");
     }
 
-    // ============================================
-    // 1. 仕訳ヘッダ（Journals）のマージ (Last-Write-Wins)
-    // ============================================
-    const localJournals = await db.journals.toArray();
-    const localJMap = new Map(localJournals.map(j => [j.id, j]));
-    const remoteJMap = new Map((remoteData.journals || []).map(j => [j.id, j]));
-
-    const mergedJournalsMap = new Map<string, Journal>();
-    const allJournalIds = new Set([...localJMap.keys(), ...remoteJMap.keys()]);
-
-    for (const id of allJournalIds) {
-        const local = localJMap.get(id);
-        const remote = remoteJMap.get(id);
-
-        if (local && remote) {
-            // updatedAtが新しい方を正とする
-            if (local.updatedAt >= remote.updatedAt) {
-                mergedJournalsMap.set(id, local);
-            } else {
-                mergedJournalsMap.set(id, remote);
-            }
-        } else if (local) {
-            mergedJournalsMap.set(id, local); // ここにしかない（新設）
-        } else if (remote) {
-            mergedJournalsMap.set(id, remote); // あっちにしかない（別端末で新設）
-        }
-    }
-    const mergedJournals = Array.from(mergedJournalsMap.values());
-
-    // ============================================
-    // 2. 仕訳明細（Journal Lines）のマージ
-    // ============================================
-    // ヘッダ（Journal）がローカル・リモートどちらから採用されたかによって、
-    // 紐付く明細もその採用側から引っ張ってくる（明細単位のLWWは整合性が壊れるため）
-
-    const mergedLines: JournalLine[] = [];
-
-    // ローカル明細のグループ化
-    const localLinesByJId = new Map<string, JournalLine[]>();
-    const localLines = await db.journal_lines.toArray();
-    for (const line of localLines) {
-        if (!localLinesByJId.has(line.journal_id)) localLinesByJId.set(line.journal_id, []);
-        localLinesByJId.get(line.journal_id)!.push(line);
-    }
-
-    // リモート明細のグループ化
-    const remoteLinesByJId = new Map<string, JournalLine[]>();
-    for (const line of (remoteData.journal_lines || [])) {
-        if (!remoteLinesByJId.has(line.journal_id)) remoteLinesByJId.set(line.journal_id, []);
-        remoteLinesByJId.get(line.journal_id)!.push(line);
-    }
-
-    for (const j of mergedJournals) {
-        const localJ = localJMap.get(j.id);
-        const isFromLocal = localJ && localJ.updatedAt === j.updatedAt;
-
-        if (isFromLocal) {
-            const lines = localLinesByJId.get(j.id);
-            if (lines) mergedLines.push(...lines);
-        } else {
-            const lines = remoteLinesByJId.get(j.id);
-            if (lines) {
-                mergedLines.push(...lines);
-            } else {
-                // 安全策：リモートに明細が無い場合はローカルから補填
-                const fallback = localLinesByJId.get(j.id);
-                if (fallback) mergedLines.push(...fallback);
-            }
-        }
-    }
-
-    // DBへの書き戻し
+    // DBをフル上書き（ローカルの変更はクラウドのもので完全に上書きされるシンプルな同期）
     await db.transaction('rw', [db.accounts, db.journals, db.journal_lines, db.ledger_entries, db.fiscal_periods], async () => {
-        // アカウントの同期 (リモートの状態を正とする。もしリモート側になければデフォルトのローカルを維持)
-        if (remoteData.accounts && remoteData.accounts.length > 0) {
+        // アカウント科目
+        if (remoteData!.accounts && remoteData!.accounts.length > 0) {
             await db.accounts.clear();
-            await db.accounts.bulkPut(remoteData.accounts);
+            await db.accounts.bulkPut(remoteData!.accounts);
         }
 
-        await db.journals.clear();
-        await db.journals.bulkPut(mergedJournals);
+        // 仕訳ヘッダ
+        if (remoteData!.journals && remoteData!.journals.length > 0) {
+            await db.journals.clear();
+            await db.journals.bulkPut(remoteData!.journals);
+        }
 
-        await db.journal_lines.clear();
-        await db.journal_lines.bulkPut(mergedLines);
+        // 仕訳明細
+        if (remoteData!.journal_lines && remoteData!.journal_lines.length > 0) {
+            await db.journal_lines.clear();
+            await db.journal_lines.bulkPut(remoteData!.journal_lines);
+        }
     });
 
-    // ============================================
-    // 3. 元帳（Ledger Entries）と 会計期間 の再構築
-    // ============================================
-    // 明細がマージされて変化したため、残高を計算し直す
+    // 元帳（Ledger Entries）と 会計期間 の再構築
     const { rebuildLedger, rebuildFiscalPeriods } = await import('../db/init');
     await rebuildLedger();
     await rebuildFiscalPeriods();
 
-    // ============================================
-    // 4. マージ完了後の最新状態をStorageにアップロード
-    // ============================================
-    // forceUploadSync internally calls sync-success or sync-error so we don't need to do it here.
-    await forceUploadSync(uid);
+    window.dispatchEvent(new CustomEvent('sync-success'));
 }

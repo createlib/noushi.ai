@@ -164,7 +164,8 @@ export default function Settings() {
             <Paper variant="outlined" sx={{ p: 2, mt: 2, borderColor: 'error.main' }}>
                 <Typography variant="subtitle1" color="error" gutterBottom>アカウント</Typography>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
-                    現在のアカウントからログアウトし、別のアカウントで再ログインします。
+                    現在のアカウントからログアウトし、別のアカウントで再ログインします。<br />
+                    (現在のアカウントID: <Box component="span" sx={{ fontFamily: 'monospace', userSelect: 'all' }}>{auth.currentUser?.uid || '未ログイン'}</Box>)
                 </Typography>
                 <Box mt={2}>
                     <Button variant="outlined" color="error" onClick={handleLogout}>

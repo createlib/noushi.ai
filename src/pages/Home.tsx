@@ -119,7 +119,7 @@ export default function Home() {
                                 {isForceUploading ? <CircularProgress size={24} /> : <CloudUploadIcon />}
                             </IconButton>
                         </Tooltip>
-                        <Tooltip title="クラウドと統合同期 (ダウンロード＆マージ)">
+                        <Tooltip title="クラウドからデータをダウンロードして最新化">
                             <IconButton onClick={handleSync} disabled={isSyncing || isForceUploading} color="primary" sx={{ bgcolor: 'primary.50' }}>
                                 {isSyncing ? <CircularProgress size={24} /> : <SyncIcon />}
                             </IconButton>
