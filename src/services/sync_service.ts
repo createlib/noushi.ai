@@ -1,6 +1,6 @@
 import { db, type Account, type Journal, type JournalLine, type LedgerEntry, type FiscalPeriod } from '../db/db';
 import { storage } from '../firebase';
-import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { ref, uploadString, getBytes } from 'firebase/storage';
 
 export interface SyncDataPayload {
     accounts: Account[];
@@ -54,16 +54,10 @@ export async function performSync(uid: string): Promise<void> {
 
     let remoteData: SyncDataPayload | null = null;
     try {
-        const url = await getDownloadURL(storageRef);
-        // ブラウザのキャッシュを回避
-        const resp = await fetch(url + `&_t=${Date.now()}`, {
-            cache: 'no-store'
-        });
-        if (resp.ok) {
-            remoteData = await resp.json();
-        } else {
-            throw new Error(`Failed to download backup: ${resp.status}`);
-        }
+        const arrayBuffer = await getBytes(storageRef);
+        const decoder = new TextDecoder('utf-8');
+        const jsonString = decoder.decode(arrayBuffer);
+        remoteData = JSON.parse(jsonString);
     } catch (e: any) {
         if (e.code === 'storage/unauthorized') {
             window.dispatchEvent(new CustomEvent('sync-error', { detail: '権限エラー' }));
