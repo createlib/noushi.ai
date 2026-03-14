@@ -123,8 +123,17 @@ export default function Ledger() {
     };
 
     return (
-        <Box p={{ xs: 1, sm: 2 }} pt={2}>
-            <Box px={1} mb={2} display="flex" justifyContent="space-between" alignItems="center">
+        <Box
+            p={{ xs: 1, sm: 2 }}
+            pt={2}
+            display="flex"
+            flexDirection="column"
+            sx={{
+                height: { xs: 'calc(100dvh - 56px - 64px)', sm: 'calc(100vh - 64px - 64px)' },
+                overflow: 'hidden'
+            }}
+        >
+            <Box px={1} mb={2} display="flex" justifyContent="space-between" alignItems="center" flexShrink={0}>
                 <Typography variant="h5" sx={{ fontWeight: 'bold' }}>仕訳帳</Typography>
                 <Box display="flex" gap={1}>
                     {selectedIds.size > 0 && (
@@ -158,7 +167,7 @@ export default function Ledger() {
                 </Alert>
             )}
 
-            <Box mb={2} display="flex" gap={2} flexWrap="wrap" alignItems="center">
+            <Box mb={2} display="flex" gap={2} flexWrap="wrap" alignItems="center" flexShrink={0}>
                 <TextField
                     size="small"
                     label="摘要・内容で検索"
@@ -181,9 +190,9 @@ export default function Ledger() {
                 )}
             </Box>
 
-            <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-                <Table sx={{ minWidth: 800 }} size="small" aria-label="ledger table">
-                    <TableHead sx={{ bgcolor: 'background.default' }}>
+            <TableContainer component={Paper} elevation={0} sx={{ flexGrow: 1, borderRadius: 2, border: '1px solid', borderColor: 'divider', overflowY: 'auto', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                <Table stickyHeader sx={{ minWidth: 800 }} size="small" aria-label="ledger table">
+                    <TableHead sx={{ '& th': { bgcolor: 'background.default', zIndex: 2 } }}>
                         <TableRow>
                             <TableCell padding="checkbox">
                                 <Checkbox
