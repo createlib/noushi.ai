@@ -71,7 +71,7 @@ export default function AnomalyDetector({ monthlyData, yearlyExpenses }: Anomaly
             {anomalies.length > 0 ? (
                 <Box display="flex" flexDirection="column" gap={2}>
                     {anomalies.map((anomaly, idx) => (
-                        <Box key={idx} p={2} bgcolor="#ffffff" borderRadius={2} borderLeft={4} borderColor="#e11d48" boxShadow="0 2px 4px rgba(0,0,0,0.02)">
+                        <Box key={idx} p={2} bgcolor="#ffffff" borderRadius={2} border="1px solid" borderColor="#fecdd3" boxShadow="0 2px 4px rgba(0,0,0,0.02)">
                             <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
                                 <Typography variant="subtitle2" fontWeight="bold" color="#be185d">
                                     {anomaly.categoryName} の異常値

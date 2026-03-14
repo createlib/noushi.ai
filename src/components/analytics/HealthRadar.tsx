@@ -80,7 +80,7 @@ export default function HealthRadar({ profitMargin, budgetAchievement, taxEffici
                 </ResponsiveContainer>
             </Box>
 
-            <Box mt="auto" p={2} bgcolor={`${rankColor}10`} borderRadius={2} borderLeft={4} borderColor={rankColor}>
+            <Box mt="auto" p={2} bgcolor={`${rankColor}10`} borderRadius={2} border="1px solid" borderColor={`${rankColor}40`}>
                 <Typography variant="body2" fontWeight="bold" color={rankColor}>
                     AI フィードバック
                 </Typography>
