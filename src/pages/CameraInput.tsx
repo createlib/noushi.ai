@@ -10,6 +10,7 @@ import { forceUploadSync } from '../services/sync_service';
 import { auth } from '../firebase';
 import { useAnalysis, type CameraQueueItem } from '../contexts/AnalysisContext';
 import { AccountAutocomplete } from '../components/AccountAutocomplete';
+import { checkIsYearClosed } from '../services/closing_service';
 
 
 export default function CameraInput() {
@@ -110,6 +111,15 @@ export default function CameraInput() {
 
         if (totalDebits !== totalCredits) {
             alert(`借方合計(¥${totalDebits})と貸方合計(¥${totalCredits})が一致しません。`);
+            setIsSaving(false);
+            return;
+        }
+
+        const targetDate = editingResult.date || dayjs().format('YYYY-MM-DD');
+        const targetYear = parseInt(targetDate.substring(0, 4), 10);
+
+        if (await checkIsYearClosed(targetYear)) {
+            alert(`${targetYear}年度は既に年度締めが完了しているため、データの追加はできません。`);
             setIsSaving(false);
             return;
         }

@@ -6,6 +6,7 @@ import dayjs from 'dayjs';
 import { db, type Journal } from '../db/db';
 import { AccountAutocomplete } from './AccountAutocomplete';
 import { auth } from '../firebase';
+import { checkIsYearClosed } from '../services/closing_service';
 // import { forceUploadSync } removed to avoid unused variable warning
 
 interface Props {
@@ -59,6 +60,21 @@ export default function TransactionEditorDialog({ open, onClose, journalToEdit }
         if (totalDebits !== totalCredits) {
             setErrorMsg(`借方合計(¥${totalDebits})と貸方合計(¥${totalCredits})が一致しません。`);
             return;
+        }
+
+        const targetYear = parseInt(date.substring(0, 4), 10);
+        if (await checkIsYearClosed(targetYear)) {
+            setErrorMsg(`${targetYear}年度は既に年度締めが完了しているため、データの追加・編集はできません。`);
+            return;
+        }
+
+        // If editing, also check if the original journal's year was closed (prevent moving dates out of closed years)
+        if (journalToEdit && journalToEdit.date) {
+            const originalYear = parseInt(journalToEdit.date.substring(0, 4), 10);
+            if (originalYear !== targetYear && await checkIsYearClosed(originalYear)) {
+                setErrorMsg(`変更前の${originalYear}年度は既に年度締めが完了しているため、日付の変更はできません。`);
+                return;
+            }
         }
 
         try {

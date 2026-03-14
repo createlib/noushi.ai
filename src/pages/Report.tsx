@@ -15,8 +15,17 @@ import { JournalPdfExporter } from '../components/JournalPdfExporter';
 export default function Report() {
     const { selectedYear } = useFiscalYear();
 
-    const allJournalsLive = useLiveQuery(() => db.journals.orderBy('date').toArray(), []);
-    const allLinesLive = useLiveQuery(() => db.journal_lines.toArray(), []);
+    const endStr = `${selectedYear}-12-31T23:59:59`;
+
+    // 過去全ての期のデータ（期首残高計算用）と、当期のデータを取得（翌期以降のデータは読み込まない）
+    const allJournalsLive = useLiveQuery(() => db.journals.where('date').belowOrEqual(endStr).toArray(), [selectedYear]);
+
+    const allLinesLive = useLiveQuery(async () => {
+        const j = await db.journals.where('date').belowOrEqual(endStr).toArray();
+        const ids = j.map(x => x.id);
+        if (ids.length === 0) return [];
+        return db.journal_lines.where('journal_id').anyOf(ids).toArray();
+    }, [selectedYear]);
     const accounts = useLiveQuery(() => db.accounts.toArray(), []);
 
     const allTransactions = React.useMemo(() => {

@@ -22,8 +22,20 @@ const COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6', '#06b6d4'
 export default function Home() {
     const { selectedYear } = useFiscalYear();
 
-    const journals = useLiveQuery(() => db.journals.toArray(), []);
-    const journalLines = useLiveQuery(() => db.journal_lines.toArray(), []);
+    const startStr = `${selectedYear - 1}-01-01`;
+    const endStr = `${selectedYear}-12-31T23:59:59`;
+
+    const journals = useLiveQuery(
+        () => db.journals.where('date').between(startStr, endStr).toArray(),
+        [selectedYear]
+    );
+
+    const journalLines = useLiveQuery(async () => {
+        const j = await db.journals.where('date').between(startStr, endStr).toArray();
+        const ids = j.map(x => x.id);
+        if (ids.length === 0) return [];
+        return db.journal_lines.where('journal_id').anyOf(ids).toArray();
+    }, [selectedYear]);
     const accounts = useLiveQuery(() => db.accounts.toArray(), []);
     const settings = useLiveQuery(() => db.settings.get(1), []);
 

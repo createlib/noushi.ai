@@ -9,22 +9,43 @@ import { db, type Journal } from '../db/db';
 import TransactionEditorDialog from '../components/TransactionEditorDialog';
 import { useFiscalYear } from '../contexts/FiscalYearContext';
 import { AccountAutocomplete } from '../components/AccountAutocomplete';
-import { TextField } from '@mui/material';
+import { TextField, Alert } from '@mui/material';
+import { checkIsYearClosed } from '../services/closing_service';
+import { useEffect } from 'react';
 
 export default function Ledger() {
     const { selectedYear } = useFiscalYear();
 
-    const allJournals = useLiveQuery(() => db.journals.orderBy('date').reverse().toArray(), []);
-    const allLines = useLiveQuery(() => db.journal_lines.toArray(), []);
-    const accounts = useLiveQuery(() => db.accounts.toArray(), []);
+    const startStr = `${selectedYear}-01-01`;
+    const endStr = `${selectedYear}-12-31T23:59:59`;
 
-    const journals = allJournals?.filter(j => j.date && j.date.startsWith(String(selectedYear)) && !j.deletedAt);
+    const journals = useLiveQuery(
+        async () => {
+            const list = await db.journals.where('date').between(startStr, endStr).toArray();
+            return list.filter(j => !j.deletedAt).sort((a, b) => b.date.localeCompare(a.date));
+        },
+        [selectedYear]
+    );
+
+    const allLines = useLiveQuery(async () => {
+        const j = await db.journals.where('date').between(startStr, endStr).toArray();
+        const ids = j.map(x => x.id);
+        if (ids.length === 0) return [];
+        return db.journal_lines.where('journal_id').anyOf(ids).toArray();
+    }, [selectedYear]);
+
+    const accounts = useLiveQuery(() => db.accounts.toArray(), []);
 
     const [editorOpen, setEditorOpen] = useState(false);
     const [editingJournal, setEditingJournal] = useState<Journal | null>(null);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [searchKeyword, setSearchKeyword] = useState('');
     const [searchAccountId, setSearchAccountId] = useState<number | ''>('');
+    const [isYearClosed, setIsYearClosed] = useState(false);
+
+    useEffect(() => {
+        checkIsYearClosed(selectedYear).then(closed => setIsYearClosed(closed));
+    }, [selectedYear]);
 
     const linesByJournalId = useMemo(() => {
         if (!allLines) return new Map<string, any[]>();
@@ -113,6 +134,7 @@ export default function Ledger() {
                             startIcon={<DeleteSweepIcon />}
                             size="small"
                             onClick={() => handleHardDelete(Array.from(selectedIds))}
+                            disabled={isYearClosed}
                         >
                             {selectedIds.size}件削除
                         </Button>
@@ -123,11 +145,18 @@ export default function Ledger() {
                         size="small"
                         disableElevation
                         onClick={() => { setEditingJournal(null); setEditorOpen(true); }}
+                        disabled={isYearClosed}
                     >
                         手動で追加
                     </Button>
                 </Box>
             </Box>
+
+            {isYearClosed && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                    {selectedYear}年度は確定済みのため、データの追加・編集・削除はできません。
+                </Alert>
+            )}
 
             <Box mb={2} display="flex" gap={2} flexWrap="wrap" alignItems="center">
                 <TextField

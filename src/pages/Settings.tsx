@@ -13,6 +13,8 @@ import { signOut } from 'firebase/auth';
 import { useAuth } from '../contexts/AuthContext';
 import 'dexie-export-import';
 import { forceUploadSync } from '../services/sync_service';
+import { useFiscalYear } from '../contexts/FiscalYearContext';
+import { closeFiscalYear, checkIsYearClosed } from '../services/closing_service';
 
 export default function Settings() {
     const { userId } = useAuth();
@@ -42,6 +44,32 @@ export default function Settings() {
 
     const allAccounts = useLiveQuery(() => db.accounts.toArray(), []);
     const expenseAccounts = allAccounts?.filter(a => a.type === 'expense') || [];
+
+    const { selectedYear } = useFiscalYear();
+    const [isYearClosed, setIsYearClosed] = useState(false);
+    const [isClosingProcess, setIsClosingProcess] = useState(false);
+
+    useEffect(() => {
+        checkIsYearClosed(selectedYear).then(closed => setIsYearClosed(closed));
+    }, [selectedYear]);
+
+    const handleCloseYear = async () => {
+        if (!window.confirm(`${selectedYear}年度の帳簿を締め、次年度（${selectedYear + 1}年）への期首残高を作成します。\n本当によろしいですか？（※一度締めると${selectedYear}年度のデータは編集できなくなります）`)) {
+            return;
+        }
+
+        setIsClosingProcess(true);
+        try {
+            await closeFiscalYear(selectedYear);
+            setIsYearClosed(true);
+            setSaveSuccess(true);
+            alert(`${selectedYear}年度の締め処理が完了しました。次年度の期首残高としてスナップショットが保存されました。`);
+        } catch (e: any) {
+            setSyncError('年度締めに失敗しました: ' + e.message);
+        } finally {
+            setIsClosingProcess(false);
+        }
+    };
 
     const navigate = useNavigate();
 
@@ -358,6 +386,32 @@ export default function Settings() {
                     <Box mt={3} mb={1}>
                         <Button variant="contained" color="primary" onClick={handleSave} disableElevation>
                             分析設定を保存する
+                        </Button>
+                    </Box>
+                </AccordionDetails>
+            </Accordion>
+
+            <Accordion expanded={expanded === 'panel_closing'} onChange={handleAccordionChange('panel_closing')} variant="outlined" sx={{ mb: 1, borderRadius: '8px !important', '&:before': { display: 'none' } }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ bgcolor: '#fffbeb', borderRadius: expanded === 'panel_closing' ? '8px 8px 0 0' : '8px' }}>
+                    <Typography variant="subtitle1" fontWeight="bold" color="warning.dark">年度締め・次期繰越</Typography>
+                </AccordionSummary>
+                <AccordionDetails sx={{ pt: 3 }}>
+                    <Typography variant="subtitle2" gutterBottom>【{selectedYear}年度】の帳簿を締める</Typography>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                        確定申告が完了したら、この年度のデータをロックし、資産・負債の残高を次年度（{selectedYear + 1}年）の「期首残高」として引き継ぎます。
+                        <br />
+                        <b>※一度実行すると、{selectedYear}年度の仕訳データの追加・編集・削除はできなくなります。</b>
+                    </Typography>
+
+                    <Box mt={3} mb={1}>
+                        <Button
+                            variant="contained"
+                            color="warning"
+                            onClick={handleCloseYear}
+                            disabled={isYearClosed || isClosingProcess}
+                            disableElevation
+                        >
+                            {isClosingProcess ? '処理中...' : isYearClosed ? `${selectedYear}年度は確定済みです` : `${selectedYear}年度を確定して繰り越す`}
                         </Button>
                     </Box>
                 </AccordionDetails>
