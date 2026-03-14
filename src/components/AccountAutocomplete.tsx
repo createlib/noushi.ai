@@ -11,9 +11,9 @@ interface AccountAutocompleteProps {
     size?: 'small' | 'medium';
 }
 
-const filterOptions = createFilterOptions({
+const filterOptions = createFilterOptions<Account>({
     matchFrom: 'any',
-    stringify: (option: Account) => `${option.code} ${option.name}`, // 検索対象文字列（コードと名前両方でヒットさせる）
+    stringify: (option) => option ? `${option.code || option.id} ${option.name || ''}` : '',
 });
 
 export const AccountAutocomplete: React.FC<AccountAutocompleteProps> = ({
@@ -30,12 +30,17 @@ export const AccountAutocomplete: React.FC<AccountAutocompleteProps> = ({
     return (
         <Autocomplete
             options={accounts}
-            getOptionLabel={(option) => `${option.code}: ${option.name}`}
-            isOptionEqualToValue={(option, value) => option.code === value.code || option.id === value.id}
+            getOptionLabel={(option) => option ? `${option.code || option.id}: ${option.name || ''}` : ''}
+            isOptionEqualToValue={(option, val) => {
+                if (!option || !val) return option === val;
+                return option.code === val.code || option.id === val.id;
+            }}
             value={selectedAccount}
             onChange={(_, newValue) => {
                 if (newValue) {
-                    onChange(newValue.code as number || newValue.id as number);
+                    onChange((newValue.code || newValue.id) as number);
+                } else {
+                    onChange('' as any); // Clear behavior
                 }
             }}
             filterOptions={filterOptions}

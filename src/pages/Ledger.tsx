@@ -40,8 +40,6 @@ export default function Ledger() {
         return map;
     }, [allLines]);
 
-    if (!journals || !allLines || !accounts) return <Typography p={2}>Loading...</Typography>;
-
     const filteredJournals = useMemo(() => {
         if (!journals) return [];
         return journals.filter(j => {
@@ -60,6 +58,9 @@ export default function Ledger() {
             return match;
         });
     }, [journals, searchKeyword, searchAccountId, linesByJournalId]);
+
+    if (!journals || !allLines || !accounts) return <Typography p={2}>Loading...</Typography>;
+
 
     const handleHardDelete = async (ids: string[]) => {
         if (!ids.length) return;
