@@ -8,7 +8,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import dayjs from 'dayjs';
 import { useFiscalYear } from '../contexts/FiscalYearContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { performSync } from '../services/sync_service';
 import { auth } from '../firebase';
 
@@ -23,6 +23,11 @@ export default function Home() {
     const settings = useLiveQuery(() => db.settings.get(1), []);
 
     const [isSyncing, setIsSyncing] = useState(false);
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     if (!journals || !journalLines || !accounts) return <Typography p={2}>Loading...</Typography>;
 
@@ -191,29 +196,31 @@ export default function Home() {
                         <>
                             {expenseData.length > 0 ? (
                                 <Box height={260} width="100%">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie
-                                                data={expenseData}
-                                                cx="50%"
-                                                cy="45%"
-                                                innerRadius={60}
-                                                outerRadius={80}
-                                                paddingAngle={5}
-                                                dataKey="value"
-                                                stroke="none"
-                                            >
-                                                {expenseData.map((_entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                                ))}
-                                            </Pie>
-                                            <RechartsTooltip
-                                                formatter={(value: any) => `¥${Number(value).toLocaleString()}`}
-                                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                            />
-                                            <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
-                                        </PieChart>
-                                    </ResponsiveContainer>
+                                    {isMounted && (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie
+                                                    data={expenseData}
+                                                    cx="50%"
+                                                    cy="45%"
+                                                    innerRadius={60}
+                                                    outerRadius={80}
+                                                    paddingAngle={5}
+                                                    dataKey="value"
+                                                    stroke="none"
+                                                >
+                                                    {expenseData.map((_entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                    ))}
+                                                </Pie>
+                                                <RechartsTooltip
+                                                    formatter={(value: any) => `¥${Number(value).toLocaleString()}`}
+                                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                                />
+                                                <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    )}
                                 </Box>
                             ) : (
                                 <Box display="flex" justifyContent="center" alignItems="center" height={260}>
@@ -225,27 +232,29 @@ export default function Home() {
 
                     {tabIndex === 1 && (
                         <Box height={280} width="100%" mt={2}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <ComposedChart data={monthlyData} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                    <XAxis dataKey="month" style={{ fontSize: '0.75rem', fill: '#64748b' }} tickLine={false} axisLine={false} />
-                                    <YAxis
-                                        tickFormatter={(val) => `¥${val >= 10000 ? (val / 10000) + '万' : val}`}
-                                        style={{ fontSize: '0.75rem', fill: '#64748b' }}
-                                        tickLine={false}
-                                        axisLine={false}
-                                    />
-                                    <RechartsTooltip
-                                        formatter={(value: any) => `¥${Number(value).toLocaleString()}`}
-                                        labelStyle={{ color: '#0f172a', fontWeight: 'bold' }}
-                                        contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                    />
-                                    <Legend wrapperStyle={{ fontSize: '0.75rem' }} />
-                                    <Bar dataKey="income" name="収入" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                                    <Bar dataKey="expense" name="経費" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                                    <Line type="monotone" dataKey="profit" name="利益" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} />
-                                </ComposedChart>
-                            </ResponsiveContainer>
+                            {isMounted && (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <ComposedChart data={monthlyData} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                        <XAxis dataKey="month" style={{ fontSize: '0.75rem', fill: '#64748b' }} tickLine={false} axisLine={false} />
+                                        <YAxis
+                                            tickFormatter={(val) => `¥${val >= 10000 ? (val / 10000) + '万' : val}`}
+                                            style={{ fontSize: '0.75rem', fill: '#64748b' }}
+                                            tickLine={false}
+                                            axisLine={false}
+                                        />
+                                        <RechartsTooltip
+                                            formatter={(value: any) => `¥${Number(value).toLocaleString()}`}
+                                            labelStyle={{ color: '#0f172a', fontWeight: 'bold' }}
+                                            contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                        />
+                                        <Legend wrapperStyle={{ fontSize: '0.75rem' }} />
+                                        <Bar dataKey="income" name="収入" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                                        <Bar dataKey="expense" name="経費" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                                        <Line type="monotone" dataKey="profit" name="利益" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} />
+                                    </ComposedChart>
+                                </ResponsiveContainer>
+                            )}
                         </Box>
                     )}
 
