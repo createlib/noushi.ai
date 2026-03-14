@@ -8,7 +8,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import dayjs from 'dayjs';
 import { useFiscalYear } from '../contexts/FiscalYearContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { performSync } from '../services/sync_service';
 import { auth } from '../firebase';
 
@@ -191,116 +191,118 @@ export default function Home() {
                     </Tabs>
                 </Box>
 
-                <Paper elevation={0} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', p: { xs: 1, sm: 3 }, pt: 3, pb: 2, minHeight: 320 }}>
-                    {tabIndex === 0 && (
-                        <>
-                            {expenseData.length > 0 ? (
-                                <Box height={260} width="100%">
-                                    {isMounted && (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <PieChart>
-                                                <Pie
-                                                    data={expenseData}
-                                                    cx="50%"
-                                                    cy="45%"
-                                                    innerRadius={60}
-                                                    outerRadius={80}
-                                                    paddingAngle={5}
-                                                    dataKey="value"
-                                                    stroke="none"
-                                                >
-                                                    {expenseData.map((_entry, index) => (
-                                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                                    ))}
-                                                </Pie>
-                                                <RechartsTooltip
-                                                    formatter={(value: any) => `¥${Number(value).toLocaleString()}`}
-                                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                                />
-                                                <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
-                                            </PieChart>
-                                        </ResponsiveContainer>
-                                    )}
-                                </Box>
-                            ) : (
-                                <Box display="flex" justifyContent="center" alignItems="center" height={260}>
-                                    <Typography color="text.secondary">経費データがありません</Typography>
-                                </Box>
-                            )}
-                        </>
-                    )}
+                <Suspense fallback={<Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>}>
+                    <Paper elevation={0} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', p: { xs: 1, sm: 3 }, pt: 3, pb: 2, minHeight: 320 }}>
+                        {tabIndex === 0 && (
+                            <>
+                                {expenseData.length > 0 ? (
+                                    <Box height={260} width="100%">
+                                        {isMounted && (
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <PieChart>
+                                                    <Pie
+                                                        data={expenseData}
+                                                        cx="50%"
+                                                        cy="45%"
+                                                        innerRadius={60}
+                                                        outerRadius={80}
+                                                        paddingAngle={5}
+                                                        dataKey="value"
+                                                        stroke="none"
+                                                    >
+                                                        {expenseData.map((_entry, index) => (
+                                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                        ))}
+                                                    </Pie>
+                                                    <RechartsTooltip
+                                                        formatter={(value: any) => `¥${Number(value).toLocaleString()}`}
+                                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                                    />
+                                                    <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                        )}
+                                    </Box>
+                                ) : (
+                                    <Box display="flex" justifyContent="center" alignItems="center" height={260}>
+                                        <Typography color="text.secondary">経費データがありません</Typography>
+                                    </Box>
+                                )}
+                            </>
+                        )}
 
-                    {tabIndex === 1 && (
-                        <Box height={280} width="100%" mt={2}>
-                            {isMounted && (
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <ComposedChart data={monthlyData} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                        <XAxis dataKey="month" style={{ fontSize: '0.75rem', fill: '#64748b' }} tickLine={false} axisLine={false} />
-                                        <YAxis
-                                            tickFormatter={(val) => `¥${val >= 10000 ? (val / 10000) + '万' : val}`}
-                                            style={{ fontSize: '0.75rem', fill: '#64748b' }}
-                                            tickLine={false}
-                                            axisLine={false}
-                                        />
-                                        <RechartsTooltip
-                                            formatter={(value: any) => `¥${Number(value).toLocaleString()}`}
-                                            labelStyle={{ color: '#0f172a', fontWeight: 'bold' }}
-                                            contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                        />
-                                        <Legend wrapperStyle={{ fontSize: '0.75rem' }} />
-                                        <Bar dataKey="income" name="収入" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                                        <Bar dataKey="expense" name="経費" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                                        <Line type="monotone" dataKey="profit" name="利益" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} />
-                                    </ComposedChart>
-                                </ResponsiveContainer>
-                            )}
-                        </Box>
-                    )}
+                        {tabIndex === 1 && (
+                            <Box height={280} width="100%" mt={2}>
+                                {isMounted && (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <ComposedChart data={monthlyData} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                            <XAxis dataKey="month" style={{ fontSize: '0.75rem', fill: '#64748b' }} tickLine={false} axisLine={false} />
+                                            <YAxis
+                                                tickFormatter={(val) => `¥${val >= 10000 ? (val / 10000) + '万' : val}`}
+                                                style={{ fontSize: '0.75rem', fill: '#64748b' }}
+                                                tickLine={false}
+                                                axisLine={false}
+                                            />
+                                            <RechartsTooltip
+                                                formatter={(value: any) => `¥${Number(value).toLocaleString()}`}
+                                                labelStyle={{ color: '#0f172a', fontWeight: 'bold' }}
+                                                contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                            />
+                                            <Legend wrapperStyle={{ fontSize: '0.75rem' }} />
+                                            <Bar dataKey="income" name="収入" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                                            <Bar dataKey="expense" name="経費" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                                            <Line type="monotone" dataKey="profit" name="利益" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} />
+                                        </ComposedChart>
+                                    </ResponsiveContainer>
+                                )}
+                            </Box>
+                        )}
 
-                    {tabIndex === 2 && (
-                        <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} gap={3} sx={{ p: 1 }}>
-                            <Box flex={1}>
-                                <Box p={3} borderRadius={2} bgcolor="#f8fafc" border="1px solid #e2e8f0" height="100%">
-                                    <Typography variant="caption" color="text.secondary" fontWeight="bold">売上高利益率 (Profit Margin)</Typography>
-                                    <Typography variant="h4" fontWeight="800" color={profitMargin >= 20 ? '#166534' : profitMargin > 0 ? '#1e40af' : '#991b1b'} mt={1}>
-                                        {profitMargin.toFixed(1)}%
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary" mt={2} fontSize="0.75rem">
-                                        {profitMargin >= 20 ? "非常に高収益で安定した体質です。この水準を維持しましょう。" :
-                                            profitMargin > 10 ? "適正な利益水準です。手堅くビジネスが推移しています。" :
-                                                profitMargin > 0 ? "利益が出ていますが、少し余力が少ない状態です。経費の見直しを推奨します。" :
-                                                    "現在、赤字状態です。早急に固定費などの見直しラインを確認してください。"}
-                                    </Typography>
+                        {tabIndex === 2 && (
+                            <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} gap={3} sx={{ p: 1 }}>
+                                <Box flex={1}>
+                                    <Box p={3} borderRadius={2} bgcolor="#f8fafc" border="1px solid #e2e8f0" height="100%">
+                                        <Typography variant="caption" color="text.secondary" fontWeight="bold">売上高利益率 (Profit Margin)</Typography>
+                                        <Typography variant="h4" fontWeight="800" color={profitMargin >= 20 ? '#166534' : profitMargin > 0 ? '#1e40af' : '#991b1b'} mt={1}>
+                                            {profitMargin.toFixed(1)}%
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary" mt={2} fontSize="0.75rem">
+                                            {profitMargin >= 20 ? "非常に高収益で安定した体質です。この水準を維持しましょう。" :
+                                                profitMargin > 10 ? "適正な利益水準です。手堅くビジネスが推移しています。" :
+                                                    profitMargin > 0 ? "利益が出ていますが、少し余力が少ない状態です。経費の見直しを推奨します。" :
+                                                        "現在、赤字状態です。早急に固定費などの見直しラインを確認してください。"}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                                <Box flex={1}>
+                                    <Box p={3} borderRadius={2} bgcolor="#f8fafc" border="1px solid #e2e8f0" height="100%">
+                                        <Typography variant="caption" color="text.secondary" fontWeight="bold">月平均生成キャッシュフロー</Typography>
+                                        <Typography variant="h4" fontWeight="800" color={avgMonthlyProfit > 0 ? '#166534' : '#991b1b'} mt={1}>
+                                            ¥{Math.round(avgMonthlyProfit).toLocaleString()}
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary" mt={2} fontSize="0.75rem">
+                                            活動月（{activeMonths}ヶ月ベース）でならした場合、毎月手元にこれだけの現金が新しく残る計算です。
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                                <Box flex={1}>
+                                    <Box p={3} borderRadius={2} bgcolor="#f8fafc" border="1px solid #e2e8f0" height="100%">
+                                        <Typography variant="caption" color="text.secondary" fontWeight="bold">最大コスト過多リスク</Typography>
+                                        <Typography variant="h4" fontWeight="800" color={costDependency > 50 ? '#991b1b' : costDependency > 30 ? '#b45309' : '#166534'} mt={1}>
+                                            {costDependency.toFixed(1)}%
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary" mt={2} fontSize="0.75rem">
+                                            最大の経費「{highestExpense?.name || '-'}」が売上の何割を占めているかの指標です。
+                                            {costDependency > 50 ? " 特定の経費に総収入の半分以上を持っていかれており、ハイリスク体質です。" :
+                                                " 特定の経費に対する過度な依存はなく、分散が効いています。"}
+                                        </Typography>
+                                    </Box>
                                 </Box>
                             </Box>
-                            <Box flex={1}>
-                                <Box p={3} borderRadius={2} bgcolor="#f8fafc" border="1px solid #e2e8f0" height="100%">
-                                    <Typography variant="caption" color="text.secondary" fontWeight="bold">月平均生成キャッシュフロー</Typography>
-                                    <Typography variant="h4" fontWeight="800" color={avgMonthlyProfit > 0 ? '#166534' : '#991b1b'} mt={1}>
-                                        ¥{Math.round(avgMonthlyProfit).toLocaleString()}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary" mt={2} fontSize="0.75rem">
-                                        活動月（{activeMonths}ヶ月ベース）でならした場合、毎月手元にこれだけの現金が新しく残る計算です。
-                                    </Typography>
-                                </Box>
-                            </Box>
-                            <Box flex={1}>
-                                <Box p={3} borderRadius={2} bgcolor="#f8fafc" border="1px solid #e2e8f0" height="100%">
-                                    <Typography variant="caption" color="text.secondary" fontWeight="bold">最大コスト過多リスク</Typography>
-                                    <Typography variant="h4" fontWeight="800" color={costDependency > 50 ? '#991b1b' : costDependency > 30 ? '#b45309' : '#166534'} mt={1}>
-                                        {costDependency.toFixed(1)}%
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary" mt={2} fontSize="0.75rem">
-                                        最大の経費「{highestExpense?.name || '-'}」が売上の何割を占めているかの指標です。
-                                        {costDependency > 50 ? " 特定の経費に総収入の半分以上を持っていかれており、ハイリスク体質です。" :
-                                            " 特定の経費に対する過度な依存はなく、分散が効いています。"}
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        </Box>
-                    )}
-                </Paper>
+                        )}
+                    </Paper>
+                </Suspense>
             </Box>
 
             <Box px={1} mb={2} display="flex" justifyContent="space-between" alignItems="center">
