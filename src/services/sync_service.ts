@@ -29,7 +29,8 @@ export async function forceUploadSync(uid: string): Promise<void> {
     const storageRef = ref(storage, `accounting-backups/${uid}/database_backup.json`);
     try {
         await uploadString(storageRef, JSON.stringify(payload), 'raw', {
-            contentType: 'application/json'
+            contentType: 'application/json',
+            cacheControl: 'no-cache, max-age=0'
         });
         window.dispatchEvent(new CustomEvent('sync-success'));
     } catch (e: any) {
