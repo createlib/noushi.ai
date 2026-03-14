@@ -9,8 +9,8 @@ import dayjs from 'dayjs';
 import { db } from '../db/db';
 import { useFiscalYear } from '../contexts/FiscalYearContext';
 import { PdfExporter } from '../components/PdfExporter';
-import { GlPrintExporter } from '../components/GlPdfExporter';
-import { JournalPrintExporter } from '../components/JournalPdfExporter';
+import { GlPdfExporter } from '../components/GlPdfExporter';
+import { JournalPdfExporter } from '../components/JournalPdfExporter';
 
 export default function Report() {
     const { selectedYear } = useFiscalYear();
@@ -622,10 +622,10 @@ export default function Report() {
 
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mt={3}>
                         <Box flex={1}>
-                            <JournalPrintExporter transactions={transactions} accounts={accounts} selectedYear={selectedYear} />
+                            <JournalPdfExporter transactions={transactions} accounts={accounts} selectedYear={selectedYear} />
                         </Box>
                         <Box flex={1}>
-                            <GlPrintExporter accounts={accounts} transactions={transactions} selectedYear={selectedYear} balancesKishu={accountBalancesKishu} />
+                            <GlPdfExporter accounts={accounts} transactions={transactions} selectedYear={selectedYear} balancesKishu={accountBalancesKishu} />
                         </Box>
                         <PdfExporter data={pdfData} />
                     </Stack>
