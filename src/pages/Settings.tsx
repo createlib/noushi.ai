@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-    Box, Typography, TextField, Button, Paper, Alert, Snackbar, MenuItem, Switch, FormControlLabel,
+    Box, Typography, TextField, Button, Alert, Snackbar, MenuItem, Switch, FormControlLabel,
     Accordion, AccordionSummary, AccordionDetails, FormGroup, Checkbox
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -42,7 +42,7 @@ export default function Settings() {
     // Accordion state
     const [expanded, setExpanded] = useState<string | false>('panel1');
 
-    const handleAccordionChange = (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
+    const handleAccordionChange = (panel: string) => (_event: React.SyntheticEvent, isExpanded: boolean) => {
         setExpanded(isExpanded ? panel : false);
     };
 
@@ -52,7 +52,14 @@ export default function Settings() {
             if (currentSettings.aiModel) setAiModel(currentSettings.aiModel);
             if (currentSettings.useFirebaseSync !== undefined) setUseFirebaseSync(currentSettings.useFirebaseSync);
             if (currentSettings.businessName) setBusinessName(currentSettings.businessName);
-            if (currentSettings.businessType) setBusinessType(currentSettings.businessType);
+            if (currentSettings.businessType) {
+                setBusinessType({
+                    general: !!currentSettings.businessType.general,
+                    agriculture: !!currentSettings.businessType.agriculture,
+                    realEstate: !!currentSettings.businessType.realEstate,
+                    salary: !!currentSettings.businessType.salary
+                });
+            }
         }
     }, [currentSettings]);
 
