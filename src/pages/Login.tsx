@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Box, Typography, TextField, Button, Paper, Alert } from '@mui/material';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 
 export const Login: React.FC = () => {
-    const [email, setEmail] = useState('');
+    const [loginId, setLoginId] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
@@ -29,11 +30,34 @@ export const Login: React.FC = () => {
         setLoading(true);
 
         try {
-            await signInWithEmailAndPassword(auth, email, password);
+            let targetEmail = loginId.trim();
+
+            // メールアドレス形式（@を含む）でない場合、NOAHユーザーIDとみなして公開プロフからメアドを検索する
+            if (!targetEmail.includes('@')) {
+                const usersRef = collection(db, 'artifacts', 'default-app-id', 'public', 'data', 'users');
+                const q = query(usersRef, where('userId', '==', targetEmail));
+                const snapshot = await getDocs(q);
+
+                if (snapshot.empty) {
+                    throw new Error('指定されたユーザーIDが見つかりません。');
+                }
+
+                targetEmail = snapshot.docs[0].data().email;
+
+                if (!targetEmail) {
+                    throw new Error('このユーザーIDにはメールアドレスが登録されていません。');
+                }
+            }
+
+            await signInWithEmailAndPassword(auth, targetEmail, password);
             // On success, AuthContext will handle state change
         } catch (err: any) {
             console.error(err);
-            setError('ログインに失敗しました。メールアドレスとパスワードを確認してください。');
+            if (err.message.includes('指定されたユーザーID') || err.message.includes('メールアドレスが登録されていません')) {
+                setError(err.message);
+            } else {
+                setError('ログインに失敗しました。ID/メールアドレスとパスワードを確認してください。');
+            }
         } finally {
             setLoading(false);
         }
@@ -66,12 +90,12 @@ export const Login: React.FC = () => {
                 <form onSubmit={handleLogin}>
                     <TextField
                         fullWidth
-                        label="メールアドレス"
-                        type="email"
+                        label="メールアドレス または NOAHユーザーID"
+                        type="text"
                         variant="outlined"
                         margin="normal"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        value={loginId}
+                        onChange={(e) => setLoginId(e.target.value)}
                         required
                         disabled={loading}
                     />

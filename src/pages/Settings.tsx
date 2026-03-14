@@ -6,10 +6,12 @@ import { doc, setDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { db as firestoreDb, auth } from '../firebase';
 import { signOut } from 'firebase/auth';
+import { useAuth } from '../contexts/AuthContext';
 import 'dexie-export-import';
 import { forceUploadSync } from '../services/sync_service';
 
 export default function Settings() {
+    const { userId } = useAuth();
     const currentSettings = useLiveQuery(() => db.settings.get(1), []);
     const [apiKey, setApiKey] = useState('');
     const [aiModel, setAiModel] = useState('gemini-2.5-flash');
@@ -165,7 +167,7 @@ export default function Settings() {
                 <Typography variant="subtitle1" color="error" gutterBottom>アカウント</Typography>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
                     現在のアカウントからログアウトし、別のアカウントで再ログインします。<br />
-                    (現在のアカウントID: <Box component="span" sx={{ fontFamily: 'monospace', userSelect: 'all' }}>{auth.currentUser?.uid || '未ログイン'}</Box>)
+                    (NOAHユーザーID: <Box component="span" sx={{ fontFamily: 'monospace', userSelect: 'all', fontSize: '1.1em', fontWeight: 'bold' }}>{userId || '未取得'}</Box>)
                 </Typography>
                 <Box mt={2}>
                     <Button variant="outlined" color="error" onClick={handleLogout}>

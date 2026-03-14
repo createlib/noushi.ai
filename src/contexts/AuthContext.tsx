@@ -8,6 +8,7 @@ import { db as localDb } from '../db/db';
 
 interface AuthContextType {
     user: User | null;
+    userId: string | null;
     membershipRank: string | null;
     loading: boolean;
     hasAccess: boolean;
@@ -15,6 +16,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({
     user: null,
+    userId: null,
     membershipRank: null,
     loading: true,
     hasAccess: false
@@ -24,6 +26,7 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
+    const [userId, setUserId] = useState<string | null>(null);
     const [membershipRank, setMembershipRank] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -44,7 +47,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         const data = docSnap.data();
                         console.log("🔥 Firestore doc exists! Raw data:", data);
                         setMembershipRank(data.membershipRank || null);
-                        console.log("🔥 Extracted membershipRank:", data.membershipRank);
+                        setUserId(data.userId || null);
+                        console.log("🔥 Extracted membershipRank:", data.membershipRank, "userId:", data.userId);
 
                         // Sync API keys to local DB if available
                         if (data.geminiApiKey !== undefined || data.aiModel !== undefined || data.useFirebaseSync !== undefined) {
@@ -88,6 +92,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 }
             } else {
                 console.log("🔥 No user is signed in.");
+                setUserId(null);
                 setMembershipRank(null);
             }
 
@@ -103,7 +108,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const hasAccess = normalizedRank === 'GUARDIAN' || normalizedRank === 'COVENANT';
 
     return (
-        <AuthContext.Provider value={{ user, membershipRank, loading, hasAccess }}>
+        <AuthContext.Provider value={{ user, userId, membershipRank, loading, hasAccess }}>
             {children}
         </AuthContext.Provider>
     );
