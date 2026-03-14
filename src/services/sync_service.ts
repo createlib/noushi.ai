@@ -155,7 +155,13 @@ export async function performSync(uid: string): Promise<void> {
     }
 
     // DBへの書き戻し
-    await db.transaction('rw', [db.journals, db.journal_lines, db.ledger_entries, db.fiscal_periods], async () => {
+    await db.transaction('rw', [db.accounts, db.journals, db.journal_lines, db.ledger_entries, db.fiscal_periods], async () => {
+        // アカウントの同期 (リモートの状態を正とする。もしリモート側になければデフォルトのローカルを維持)
+        if (remoteData.accounts && remoteData.accounts.length > 0) {
+            await db.accounts.clear();
+            await db.accounts.bulkPut(remoteData.accounts);
+        }
+
         await db.journals.clear();
         await db.journals.bulkPut(mergedJournals);
 
