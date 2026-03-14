@@ -185,7 +185,9 @@ export default function TransactionEditorDialog({ open, onClose, journalToEdit }
                         <TextField
                             size="small" type="number" label="金額" value={d.amount || ''}
                             onChange={(e) => updateLine('debits', i, 'amount', Number(e.target.value))}
-                            sx={{ width: '140px' }}
+                            sx={{ width: { xs: '90px', sm: '140px' } }}
+                            InputProps={{ sx: { fontSize: { xs: '0.8rem', sm: '1rem' } } }}
+                            InputLabelProps={{ sx: { fontSize: { xs: '0.8rem', sm: '1rem' } } }}
                             disabled={isLoadingLines}
                         />
                         <IconButton sx={{ color: 'error.main', p: 0.5 }} onClick={() => removeLine('debits', i)} disabled={debits.length <= 1 || isLoadingLines}>
@@ -212,7 +214,9 @@ export default function TransactionEditorDialog({ open, onClose, journalToEdit }
                         <TextField
                             size="small" type="number" label="金額" value={c.amount || ''}
                             onChange={(e) => updateLine('credits', i, 'amount', Number(e.target.value))}
-                            sx={{ width: '140px' }}
+                            sx={{ width: { xs: '90px', sm: '140px' } }}
+                            InputProps={{ sx: { fontSize: { xs: '0.8rem', sm: '1rem' } } }}
+                            InputLabelProps={{ sx: { fontSize: { xs: '0.8rem', sm: '1rem' } } }}
                             disabled={isLoadingLines}
                         />
                         <IconButton sx={{ color: 'error.main', p: 0.5 }} onClick={() => removeLine('credits', i)} disabled={credits.length <= 1 || isLoadingLines}>

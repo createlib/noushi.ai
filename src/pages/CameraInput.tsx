@@ -392,7 +392,11 @@ export default function CameraInput() {
                                         value={d.code}
                                         onChange={(newCode: number) => updateLine('debits', i, 'code', newCode)}
                                     />
-                                    <TextField size="small" type="number" label="金額" value={d.amount || ''} onChange={(e) => updateLine('debits', i, 'amount', Number(e.target.value))} sx={{ width: '120px' }} />
+                                    <TextField size="small" type="number" label="金額" value={d.amount || ''} onChange={(e) => updateLine('debits', i, 'amount', Number(e.target.value))}
+                                        sx={{ width: { xs: '90px', sm: '120px' } }}
+                                        InputProps={{ sx: { fontSize: { xs: '0.8rem', sm: '1rem' } } }}
+                                        InputLabelProps={{ sx: { fontSize: { xs: '0.8rem', sm: '1rem' } } }}
+                                    />
                                     <IconButton sx={{ color: 'error.main', p: 0.5 }} onClick={() => removeLine('debits', i)} disabled={editingResult.debits.length <= 1}>
                                         <RemoveCircleOutline />
                                     </IconButton>
@@ -413,7 +417,11 @@ export default function CameraInput() {
                                         value={c.code}
                                         onChange={(newCode: number) => updateLine('credits', i, 'code', newCode)}
                                     />
-                                    <TextField size="small" type="number" label="金額" value={c.amount || ''} onChange={(e) => updateLine('credits', i, 'amount', Number(e.target.value))} sx={{ width: '120px' }} />
+                                    <TextField size="small" type="number" label="金額" value={c.amount || ''} onChange={(e) => updateLine('credits', i, 'amount', Number(e.target.value))}
+                                        sx={{ width: { xs: '90px', sm: '120px' } }}
+                                        InputProps={{ sx: { fontSize: { xs: '0.8rem', sm: '1rem' } } }}
+                                        InputLabelProps={{ sx: { fontSize: { xs: '0.8rem', sm: '1rem' } } }}
+                                    />
                                     <IconButton sx={{ color: 'error.main', p: 0.5 }} onClick={() => removeLine('credits', i)} disabled={editingResult.credits.length <= 1}>
                                         <RemoveCircleOutline />
                                     </IconButton>

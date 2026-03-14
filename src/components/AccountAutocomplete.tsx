@@ -47,11 +47,27 @@ export const AccountAutocomplete: React.FC<AccountAutocompleteProps> = ({
             disabled={disabled}
             size={size}
             sx={{ flex: 1 }}
+            ListboxProps={{
+                sx: {
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    '& .MuiAutocomplete-option': {
+                        minHeight: { xs: '32px', sm: '48px' },
+                        padding: { xs: '4px 8px', sm: '6px 16px' }
+                    }
+                }
+            }}
             renderInput={(params) => (
                 <TextField
                     {...params}
                     label={label}
                     variant="outlined"
+                    InputProps={{
+                        ...params.InputProps,
+                        sx: { fontSize: { xs: '0.75rem', sm: '0.875rem' }, padding: { xs: '2px', sm: '8.5px 14px' } }
+                    }}
+                    InputLabelProps={{
+                        sx: { fontSize: { xs: '0.75rem', sm: '0.875rem' } }
+                    }}
                 />
             )}
         />
