@@ -182,7 +182,7 @@ function App() {
             <CssBaseline />
             <ErrorBoundary>
               <BrowserRouter>
-                <Box sx={{ pb: 7, maxWidth: '800px', mx: 'auto', width: '100%', minHeight: '100vh', bgcolor: 'background.default', boxShadow: '0 0 20px rgba(0,0,0,0.05)', position: 'relative' }}>
+                <Box sx={{ pb: 7, maxWidth: { xs: '100%', md: '75%' }, mx: 'auto', width: '100%', minHeight: '100vh', bgcolor: 'background.default', boxShadow: '0 0 20px rgba(0,0,0,0.05)', position: 'relative' }}>
                   <AppBar position="sticky" elevation={0} sx={{ borderBottom: '1px solid', borderColor: 'divider', zIndex: 1100 }}>
                     <Toolbar>
                       <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold', color: 'primary.main', display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -209,7 +209,7 @@ function App() {
                     <Route path="/login" element={null} />
                     <Route path="*" element={
                       <Box sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1000, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
-                        <Paper sx={{ width: '100%', maxWidth: '800px', pb: 'env(safe-area-inset-bottom)', pointerEvents: 'auto', borderRadius: { xs: 0, md: '16px 16px 0 0' }, overflow: 'hidden' }} elevation={3}>
+                        <Paper sx={{ width: '100%', maxWidth: { xs: '100%', md: '75%' }, pb: 'env(safe-area-inset-bottom)', pointerEvents: 'auto', borderRadius: { xs: 0, md: '16px 16px 0 0' }, overflow: 'hidden' }} elevation={3}>
                           <BottomNavigation
                             showLabels
                             value={navValue}
