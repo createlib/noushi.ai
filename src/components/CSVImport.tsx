@@ -1,26 +1,18 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { Box, Typography, Button, Paper, TextField, CircularProgress, MenuItem, Snackbar, Alert, IconButton, Dialog, Stack, Checkbox, FormControlLabel } from '@mui/material';
 import { UploadFile, AddCircleOutline, RemoveCircleOutline, CheckCircle, ErrorOutline, Close, SkipNext } from '@mui/icons-material';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
 
 import { db } from '../db/db';
-import { analyzeCSVRow, type AIResult } from '../services/ai_service';
-
-interface CSVQueueItem {
-    id: string;
-    originalRow: string;
-    status: 'pending' | 'analyzing' | 'success' | 'skipped' | 'error';
-    result?: AIResult | null;
-    errorMsg?: string;
-}
+import { type AIResult } from '../services/ai_service';
+import { useAnalysis, type CSVQueueItem } from '../contexts/AnalysisContext';
 
 export default function CSVImport() {
-    const [queue, setQueue] = useState<CSVQueueItem[]>([]);
+    const { csvQueue: queue, addCsvItems, removeCsvItem, skipCsvItem, retryCsvItem } = useAnalysis();
     const [reviewingId, setReviewingId] = useState<string | null>(null);
     const [successMsg, setSuccessMsg] = useState('');
     const [editingResult, setEditingResult] = useState<AIResult | null>(null);
-    const [isProcessing, setIsProcessing] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const accounts = useLiveQuery(() => db.accounts.toArray()) || [];
@@ -42,7 +34,7 @@ export default function CSVImport() {
             }));
 
             // 先頭行などのヘッダーを含めて一旦全部キューに入れる。
-            setQueue(prev => [...prev, ...newItems]);
+            addCsvItems(newItems);
         };
         // 一般的なネット銀行のCSVはShift_JIS形式が多いため、Shift_JISで読み込む
         reader.readAsText(file, 'Shift_JIS');
@@ -50,48 +42,16 @@ export default function CSVImport() {
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
-    // キューの逐次処理
-    useEffect(() => {
-        const processNext = async () => {
-            if (isProcessing) return;
-
-            const nextItem = queue.find(q => q.status === 'pending');
-            if (!nextItem) return;
-
-            setIsProcessing(true);
-            setQueue(prev => prev.map(q => q.id === nextItem.id ? { ...q, status: 'analyzing' } : q));
-
-            try {
-                const aiData = await analyzeCSVRow(nextItem.originalRow);
-                if (aiData?.isPersonalUse) {
-                    setQueue(prev => prev.map(q => q.id === nextItem.id ? { ...q, status: 'skipped', result: aiData } : q));
-                } else if (aiData && aiData.debits.length > 0 && aiData.credits.length > 0) {
-                    setQueue(prev => prev.map(q => q.id === nextItem.id ? { ...q, status: 'success', result: aiData } : q));
-                } else {
-                    // 日付や金額の配列が空であれば、ヘッダー行や対象外とみなしてエラー（スキップに近い）
-                    setQueue(prev => prev.map(q => q.id === nextItem.id ? { ...q, status: 'error', errorMsg: 'パース結果が空です（不要な行の可能性）' } : q));
-                }
-            } catch (err: any) {
-                setQueue(prev => prev.map(q => q.id === nextItem.id ? { ...q, status: 'error', errorMsg: err.message || 'AI解析に失敗しました' } : q));
-            } finally {
-                setIsProcessing(false);
-            }
-        };
-
-        processNext();
-    }, [queue, isProcessing]);
-
-
     const handleRetry = (id: string) => {
-        setQueue(prev => prev.map(q => q.id === id ? { ...q, status: 'pending', errorMsg: undefined } : q));
+        retryCsvItem(id);
     };
 
     const handleRemove = (id: string) => {
-        setQueue(prev => prev.filter(q => q.id !== id));
+        removeCsvItem(id);
     };
 
     const handleSkip = (id: string) => {
-        setQueue(prev => prev.map(q => q.id === id ? { ...q, status: 'skipped' } : q));
+        skipCsvItem(id);
     }
 
     const openReview = (item: CSVQueueItem) => {

@@ -5,21 +5,14 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
 
 import { db } from '../db/db';
-import { analyzeReceipt, type AIResult } from '../services/ai_service';
+import { type AIResult } from '../services/ai_service';
 import { forceUploadSync } from '../services/sync_service';
 import { auth } from '../firebase';
+import { useAnalysis, type CameraQueueItem } from '../contexts/AnalysisContext';
 
-interface QueueItem {
-    id: string;
-    imagePreview: string; // base64
-    fileType: string;
-    status: 'analyzing' | 'success' | 'error';
-    result?: AIResult | null;
-    errorMsg?: string;
-}
 
 export default function CameraInput() {
-    const [queue, setQueue] = useState<QueueItem[]>([]);
+    const { cameraQueue: queue, addCameraItems, removeCameraItem, retryCameraItem } = useAnalysis();
     const [reviewingId, setReviewingId] = useState<string | null>(null);
     const [successMsg, setSuccessMsg] = useState('');
     const [editingResult, setEditingResult] = useState<AIResult | null>(null);
@@ -40,39 +33,27 @@ export default function CameraInput() {
                 const base64 = reader.result as string;
                 const id = crypto.randomUUID();
 
-                const newItem: QueueItem = { id, imagePreview: base64, fileType: file.type, status: 'analyzing' };
-                setQueue(prev => [newItem, ...prev]);
-
-                runAnalysis(id, base64, file.type);
+                addCameraItems([{
+                    id,
+                    imagePreview: base64,
+                    fileType: file.type,
+                    status: 'analyzing'
+                }]);
             };
             reader.readAsDataURL(file);
         }
         event.target.value = '';
     };
 
-    const runAnalysis = async (id: string, base64: string, fileType: string) => {
-        try {
-            const aiData = await analyzeReceipt(base64, fileType);
-            if (aiData) {
-                setQueue(prev => prev.map(q => q.id === id ? { ...q, status: 'success', result: aiData } : q));
-            } else {
-                setQueue(prev => prev.map(q => q.id === id ? { ...q, status: 'error', errorMsg: '解析結果が空でした' } : q));
-            }
-        } catch (err: any) {
-            setQueue(prev => prev.map(q => q.id === id ? { ...q, status: 'error', errorMsg: err.message || 'AI解析に失敗しました' } : q));
-        }
-    };
-
-    const handleRetry = (item: QueueItem) => {
-        setQueue(prev => prev.map(q => q.id === item.id ? { ...q, status: 'analyzing', errorMsg: undefined } : q));
-        runAnalysis(item.id, item.imagePreview, item.fileType);
+    const handleRetry = (item: CameraQueueItem) => {
+        retryCameraItem(item.id);
     };
 
     const handleRemove = (id: string) => {
-        setQueue(prev => prev.filter(q => q.id !== id));
+        removeCameraItem(id);
     };
 
-    const openReview = (item: QueueItem) => {
+    const openReview = (item: CameraQueueItem) => {
         if (item.result) {
             setReviewingId(item.id);
             // 深いコピーを作成

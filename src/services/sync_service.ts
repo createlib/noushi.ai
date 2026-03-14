@@ -16,6 +16,8 @@ export interface SyncDataPayload {
 export async function forceUploadSync(uid: string): Promise<void> {
     if (!uid) throw new Error("ユーザーがログインしていません。");
 
+    window.dispatchEvent(new CustomEvent('sync-start'));
+
     const payload: SyncDataPayload = {
         accounts: await db.accounts.toArray(),
         journals: await db.journals.toArray(),
@@ -29,7 +31,9 @@ export async function forceUploadSync(uid: string): Promise<void> {
         await uploadString(storageRef, JSON.stringify(payload), 'raw', {
             contentType: 'application/json'
         });
+        window.dispatchEvent(new CustomEvent('sync-success'));
     } catch (e: any) {
+        window.dispatchEvent(new CustomEvent('sync-error', { detail: e.message || 'Sync failed' }));
         if (e.code === 'storage/unauthorized') {
             throw new Error('Firebase Storageの権限エラーです。Storageルールに accounting-backups フォルダへのアクセス許可を追加してください。');
         }
@@ -45,6 +49,8 @@ export async function forceUploadSync(uid: string): Promise<void> {
 export async function performSync(uid: string): Promise<void> {
     if (!uid) throw new Error("ユーザーがログインしていません。");
 
+    window.dispatchEvent(new CustomEvent('sync-start'));
+
     const storageRef = ref(storage, `accounting-backups/${uid}/database_backup.json`);
 
     let remoteData: SyncDataPayload | null = null;
@@ -56,6 +62,7 @@ export async function performSync(uid: string): Promise<void> {
         }
     } catch (e: any) {
         if (e.code === 'storage/unauthorized') {
+            window.dispatchEvent(new CustomEvent('sync-error', { detail: '権限エラー' }));
             throw new Error('Firebase Storageの権限エラーです。Storageルールに accounting-backups フォルダへのアクセス・読み取り許可を追加してください。');
         }
         console.log("No remote backup found. Assuming first-time sync:", e);
@@ -158,5 +165,6 @@ export async function performSync(uid: string): Promise<void> {
     // ============================================
     // 4. マージ完了後の最新状態をStorageにアップロード
     // ============================================
+    // forceUploadSync internally calls sync-success or sync-error so we don't need to do it here.
     await forceUploadSync(uid);
 }
