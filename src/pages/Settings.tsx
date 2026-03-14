@@ -143,7 +143,7 @@ export default function Settings() {
             <Typography variant="h5" gutterBottom fontWeight="bold" mb={3} color="primary.dark">設定パネル</Typography>
 
             <Accordion expanded={expanded === 'panel1'} onChange={handleAccordionChange('panel1')} variant="outlined" sx={{ mb: 1, borderRadius: '8px !important', '&:before': { display: 'none' } }}>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ bgcolor: '#f8fafc', borderRadius: expanded === 'panel1' ? '8px 8px 0 0' : 8 }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ bgcolor: '#f8fafc', borderRadius: expanded === 'panel1' ? '8px 8px 0 0' : '8px' }}>
                     <Typography variant="subtitle1" fontWeight="bold">プロフィール / 事業設定</Typography>
                 </AccordionSummary>
                 <AccordionDetails sx={{ pt: 3 }}>
@@ -190,7 +190,7 @@ export default function Settings() {
             </Accordion>
 
             <Accordion expanded={expanded === 'panel2'} onChange={handleAccordionChange('panel2')} variant="outlined" sx={{ mb: 1, borderRadius: '8px !important', '&:before': { display: 'none' } }}>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ bgcolor: '#f8fafc', borderRadius: expanded === 'panel2' ? '8px 8px 0 0' : 8 }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ bgcolor: '#f8fafc', borderRadius: expanded === 'panel2' ? '8px 8px 0 0' : '8px' }}>
                     <Typography variant="subtitle1" fontWeight="bold">Gemini API連携 (AI自動仕訳)</Typography>
                 </AccordionSummary>
                 <AccordionDetails sx={{ pt: 3 }}>
@@ -231,7 +231,7 @@ export default function Settings() {
             </Accordion>
 
             <Accordion expanded={expanded === 'panel3'} onChange={handleAccordionChange('panel3')} variant="outlined" sx={{ mb: 1, borderRadius: '8px !important', '&:before': { display: 'none' } }}>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ bgcolor: '#f8fafc', borderRadius: expanded === 'panel3' ? '8px 8px 0 0' : 8 }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ bgcolor: '#f8fafc', borderRadius: expanded === 'panel3' ? '8px 8px 0 0' : '8px' }}>
                     <Typography variant="subtitle1" fontWeight="bold">バックアップ / クラウド同期</Typography>
                 </AccordionSummary>
                 <AccordionDetails sx={{ pt: 3 }}>
@@ -272,7 +272,7 @@ export default function Settings() {
             </Accordion>
 
             <Accordion expanded={expanded === 'panel4'} onChange={handleAccordionChange('panel4')} variant="outlined" sx={{ mb: 3, borderColor: 'error.light', borderRadius: '8px !important', '&:before': { display: 'none' } }}>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ bgcolor: '#fef2f2', borderRadius: expanded === 'panel4' ? '8px 8px 0 0' : 8 }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ bgcolor: '#fef2f2', borderRadius: expanded === 'panel4' ? '8px 8px 0 0' : '8px' }}>
                     <Typography variant="subtitle1" fontWeight="bold" color="error.main">システム / アカウント</Typography>
                 </AccordionSummary>
                 <AccordionDetails sx={{ pt: 3 }}>

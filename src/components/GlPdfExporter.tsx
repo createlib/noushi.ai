@@ -90,6 +90,9 @@ export const GlPdfExporter: React.FC<{ accounts: any[], transactions: any[], sel
             const wrapper = document.getElementById('gl-pdf-wrapper');
             if (wrapper) wrapper.style.display = 'block';
 
+            // Allow DOM to paint before html2canvas
+            await new Promise(resolve => setTimeout(resolve, 100));
+
             const pdf = new jsPDF('l', 'mm', 'a4');
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
@@ -147,7 +150,7 @@ export const GlPdfExporter: React.FC<{ accounts: any[], transactions: any[], sel
                             id={`gl-page-${index}`}
                             sx={{
                                 width: '297mm', // A4 Landscape
-                                height: '210mm',
+                                minHeight: '210mm',
                                 padding: '15mm 20mm 20mm 20mm',
                                 bgcolor: 'white',
                                 color: 'black',

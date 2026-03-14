@@ -13,7 +13,7 @@ export const JournalPdfExporter: React.FC<{ transactions: any[], accounts: any[]
 
     // Build pages
     const pages: any[] = [];
-    const maxRowsPerPage = 20; // Fit portrait A4
+    const maxRowsPerPage = 14; // Fit portrait A4 without bottom crop
 
     // Prepare flat rows from transactions
     const rows: any[] = [];
@@ -60,6 +60,9 @@ export const JournalPdfExporter: React.FC<{ transactions: any[], accounts: any[]
         try {
             const wrapper = document.getElementById('journal-pdf-wrapper');
             if (wrapper) wrapper.style.display = 'block';
+
+            // Allow DOM to paint before html2canvas captures
+            await new Promise(resolve => setTimeout(resolve, 100));
 
             // Use portrait for Journal
             const pdf = new jsPDF('p', 'mm', 'a4');
@@ -121,7 +124,7 @@ export const JournalPdfExporter: React.FC<{ transactions: any[], accounts: any[]
                             id={`journal-page-${index}`}
                             sx={{
                                 width: '210mm', // A4 Portrait
-                                height: '297mm',
+                                minHeight: '297mm',
                                 padding: '15mm 20mm 20mm 20mm', // Safe margins
                                 bgcolor: 'white',
                                 color: 'black',
@@ -142,13 +145,13 @@ export const JournalPdfExporter: React.FC<{ transactions: any[], accounts: any[]
                             <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid #1e3a8a', fontSize: '13px' }}>
                                 <thead>
                                     <tr style={{ backgroundColor: '#eff6ff', borderBottom: '2px solid #1e3a8a' }}>
-                                        <th style={{ padding: '8px', borderRight: '1px solid #93c5fd', width: '12%', color: '#1e3a8a' }}>日付</th>
-                                        <th style={{ padding: '8px', borderRight: '1px solid #93c5fd', width: '6%', color: '#1e3a8a' }}>No.</th>
-                                        <th style={{ padding: '8px', borderRight: '1px solid #93c5fd', width: '17%', color: '#1e3a8a' }}>借方科目</th>
-                                        <th style={{ padding: '8px', borderRight: '1px solid #93c5fd', width: '14%', color: '#1e3a8a' }}>借方金額</th>
-                                        <th style={{ padding: '8px', borderRight: '1px solid #93c5fd', width: '17%', color: '#1e3a8a' }}>貸方科目</th>
-                                        <th style={{ padding: '8px', borderRight: '1px solid #93c5fd', width: '14%', color: '#1e3a8a' }}>貸方金額</th>
-                                        <th style={{ padding: '8px', width: '20%', color: '#1e3a8a' }}>摘要</th>
+                                        <th style={{ padding: '8px', borderRight: '1px solid #93c5fd', width: '14%', color: '#1e3a8a', whiteSpace: 'nowrap' }}>日付</th>
+                                        <th style={{ padding: '8px', borderRight: '1px solid #93c5fd', width: '5%', color: '#1e3a8a' }}>No.</th>
+                                        <th style={{ padding: '8px', borderRight: '1px solid #93c5fd', width: '16%', color: '#1e3a8a' }}>借方科目</th>
+                                        <th style={{ padding: '8px', borderRight: '1px solid #93c5fd', width: '13%', color: '#1e3a8a' }}>借方金額</th>
+                                        <th style={{ padding: '8px', borderRight: '1px solid #93c5fd', width: '16%', color: '#1e3a8a' }}>貸方科目</th>
+                                        <th style={{ padding: '8px', borderRight: '1px solid #93c5fd', width: '13%', color: '#1e3a8a' }}>貸方金額</th>
+                                        <th style={{ padding: '8px', width: '23%', color: '#1e3a8a' }}>摘要</th>
                                     </tr>
                                 </thead>
                                 <tbody>
