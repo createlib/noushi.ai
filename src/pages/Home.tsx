@@ -71,33 +71,35 @@ export default function Home() {
     }
 
     // Prepare Monthly Trend Data
-    const monthlyDataMap: Record<string, { month: string, income: number, expense: number, profit: number }> = {};
-    for (let i = 1; i <= 12; i++) {
-        const mm = i.toString().padStart(2, '0');
-        monthlyDataMap[mm] = { month: `${i}月`, income: 0, expense: 0, profit: 0 };
-    }
+    const monthlyData = Array.from({ length: 12 }, (_, i) => ({
+        month: `${i + 1}月`,
+        income: 0,
+        expense: 0,
+        profit: 0
+    }));
 
     yearLines.forEach(line => {
         const j = journals.find(j => j.id === line.journal_id);
         const acc = accounts.find(a => String(a.code || a.id) === String(line.account_id));
         if (!j || !j.date || !acc) return;
 
-        const monthKey = j.date.substring(5, 7);
-        if (!monthlyDataMap[monthKey]) return;
+        const monthNum = parseInt(j.date.substring(5, 7), 10);
+        if (isNaN(monthNum) || monthNum < 1 || monthNum > 12) return;
+
+        const monthIndex = monthNum - 1;
 
         if (acc.type === 'revenue' && line.credit > 0) {
-            monthlyDataMap[monthKey].income += line.credit;
+            monthlyData[monthIndex].income += line.credit;
         }
 
         if (acc.type === 'expense' && line.debit > 0) {
-            monthlyDataMap[monthKey].expense += line.debit;
+            monthlyData[monthIndex].expense += line.debit;
         }
     });
 
-    const monthlyData = Object.values(monthlyDataMap).map(m => ({
-        ...m,
-        profit: m.income - m.expense
-    }));
+    monthlyData.forEach(m => {
+        m.profit = m.income - m.expense;
+    });
 
     // Calculate KPIs
     const profitMargin = income > 0 ? ((income - expense) / income) * 100 : 0;
