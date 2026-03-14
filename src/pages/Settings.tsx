@@ -3,7 +3,9 @@ import { Box, Typography, TextField, Button, Paper, Alert, Snackbar, MenuItem, S
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { doc, setDoc } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
 import { db as firestoreDb, auth } from '../firebase';
+import { signOut } from 'firebase/auth';
 import 'dexie-export-import';
 import { forceUploadSync } from '../services/sync_service';
 
@@ -12,6 +14,7 @@ export default function Settings() {
     const [apiKey, setApiKey] = useState('');
     const [aiModel, setAiModel] = useState('gemini-2.5-flash');
     const [useFirebaseSync, setUseFirebaseSync] = useState(false);
+    const navigate = useNavigate();
 
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [syncError, setSyncError] = useState<string | null>(null);
@@ -75,6 +78,16 @@ export default function Settings() {
             URL.revokeObjectURL(url);
         } catch (e) {
             alert('エクスポートに失敗しました');
+        }
+    };
+
+    const handleLogout = async () => {
+        try {
+            await signOut(auth);
+            navigate('/login');
+        } catch (error) {
+            console.error('Logout error:', error);
+            alert('ログアウトに失敗しました');
         }
     };
 
@@ -144,6 +157,18 @@ export default function Settings() {
                 <Box mt={2}>
                     <Button variant="outlined" onClick={handleExport}>
                         全データをエクスポート
+                    </Button>
+                </Box>
+            </Paper>
+
+            <Paper variant="outlined" sx={{ p: 2, mt: 2, borderColor: 'error.main' }}>
+                <Typography variant="subtitle1" color="error" gutterBottom>アカウント</Typography>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                    現在のアカウントからログアウトし、別のアカウントで再ログインします。
+                </Typography>
+                <Box mt={2}>
+                    <Button variant="outlined" color="error" onClick={handleLogout}>
+                        ログアウト
                     </Button>
                 </Box>
             </Paper>
