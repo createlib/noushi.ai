@@ -301,8 +301,9 @@ export default function Report() {
         const monthlyPurchases = Array(12).fill(0);
         const allSalesCodes = [...salesCodes, ...agrSalesCodes, ...reSalesCodes];
         
-        // 月別売上には家事消費(583)や雑収入等は含めない
-        const allSalesCodesForMonthly = allSalesCodes.filter(c => c !== 583 && c !== 590 && c !== 5999);
+        // 月別売上には家事消費(583)や雑収入等は含めない。
+        // ※「売上値引・返品(5999)」は純売上を計算するために必ず含めること
+        const allSalesCodesForMonthly = allSalesCodes.filter(c => c !== 583 && c !== 590);
         const allPurchaseCodes = [610, 5300, 8000]; // 一般仕入, 製造原材料仕入, 農業種苗等
 
         const plKajiShouhi = plOtherIncome.find(a => a.code === 583);
@@ -316,11 +317,16 @@ export default function Report() {
             const monthNum = parseInt(t.date.substring(5, 7), 10);
             if (monthNum >= 1 && monthNum <= 12) {
                 const idx = monthNum - 1;
-                const salesInT = (t.credits || []).filter((c: any) => allSalesCodesForMonthly.includes(c.code)).reduce((sum: number, c: any) => sum + c.amount, 0);
-                monthlySales[idx] += salesInT;
+                
+                // 売上は貸方(Credit)が増加、借方(Debit)が減少(返品・値引など)
+                const salesCredits = (t.credits || []).filter((c: any) => allSalesCodesForMonthly.includes(c.code)).reduce((sum: number, c: any) => sum + c.amount, 0);
+                const salesDebits = (t.debits || []).filter((d: any) => allSalesCodesForMonthly.includes(d.code)).reduce((sum: number, d: any) => sum + d.amount, 0);
+                monthlySales[idx] += (salesCredits - salesDebits);
 
-                const purchasesInT = (t.debits || []).filter((d: any) => allPurchaseCodes.includes(d.code)).reduce((sum: number, d: any) => sum + d.amount, 0);
-                monthlyPurchases[idx] += purchasesInT;
+                // 仕入(経費)は借方(Debit)が増加、貸方(Credit)が減少(値引・戻しなど)
+                const purchasesDebits = (t.debits || []).filter((d: any) => allPurchaseCodes.includes(d.code)).reduce((sum: number, d: any) => sum + d.amount, 0);
+                const purchasesCredits = (t.credits || []).filter((c: any) => allPurchaseCodes.includes(c.code)).reduce((sum: number, c: any) => sum + c.amount, 0);
+                monthlyPurchases[idx] += (purchasesDebits - purchasesCredits);
             }
         });
 
