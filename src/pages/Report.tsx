@@ -102,10 +102,19 @@ export default function Report() {
             const sYear = String(selectedYear);
 
 
-            if (tYear < sYear || (tYear === sYear && isOpeningBalanceEntry(t))) {
+            if (tYear < sYear) {
                 if (!pastTransactionsByYear[tYear]) pastTransactionsByYear[tYear] = [];
                 pastTransactionsByYear[tYear].push(t);
+            } else if (tYear === sYear && isOpeningBalanceEntry(t)) {
+                // 当期の期首設定仕訳: current には含めず、別途 kishu の残高に直接加算する
+                (t.debits || []).forEach((d: any) => {
+                    accountBalancesKishu[d.code] += d.amount;
+                });
+                (t.credits || []).forEach((c: any) => {
+                    accountBalancesKishu[c.code] -= c.amount;
+                });
             } else if (tYear === sYear) {
+                // 通常の当期取引
                 (t.debits || []).forEach((d: any) => {
                     accountBalancesCurrent[d.code] += d.amount;
                 });
@@ -133,7 +142,7 @@ export default function Report() {
                     deltaCapital += accountBalancesKishu[a.code];
                     accountBalancesKishu[a.code] = 0;
                 } else if (a.code === 310 || a.name.includes("事業主借")) {
-                    deltaCapital += accountBalancesKishu[a.code];
+                    deltaCapital -= accountBalancesKishu[a.code];
                     accountBalancesKishu[a.code] = 0;
                 }
             });
@@ -142,7 +151,7 @@ export default function Report() {
             const capitalAcct = accounts.find(a => a.name.includes("元入金"));
             if (capitalAcct) capitalCode = capitalAcct.code;
             if (accounts.some(a => a.code === capitalCode)) {
-                accountBalancesKishu[capitalCode] += deltaCapital;
+                accountBalancesKishu[capitalCode] -= deltaCapital; // 修正点 (利益余剰は負債/資本の貸方側に直接足すため引く)
             }
         });
 
