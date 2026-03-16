@@ -297,16 +297,23 @@ export default function Report() {
         const monthlySales = Array(12).fill(0);
         const monthlyPurchases = Array(12).fill(0);
         const allSalesCodes = [...salesCodes, ...agrSalesCodes, ...reSalesCodes];
+        
+        // 月別売上には家事消費(583)や雑収入等は含めない
+        const allSalesCodesForMonthly = allSalesCodes.filter(c => c !== 583 && c !== 590 && c !== 5999);
         const allPurchaseCodes = [610, 5300, 8000]; // 一般仕入, 製造原材料仕入, 農業種苗等
 
-        const kajiShouhiTotal = transactions.reduce((sum, t) => sum + (t.credits || []).filter((c: any) => c.code === 583).reduce((s: number, c: any) => s + c.amount, 0), 0);
-        const zatsuShuunyuuTotal = transactions.reduce((sum, t) => sum + (t.credits || []).filter((c: any) => c.code === 590).reduce((s: number, c: any) => s + c.amount, 0), 0);
+        const plKajiShouhi = plSales.find(a => a.code === 583);
+        const kajiShouhiTotal = plKajiShouhi ? plKajiShouhi.balance : 0;
         
+        // その他の収入（雑収入、受取利息など）の合計
+        const zatsuShuunyuuTotal = plOtherIncome.reduce((sum, a) => sum + a.balance, 0);
+
         transactions.forEach(t => {
+            if (isOpeningBalanceEntry(t)) return; // 期首残高仕訳は月別合計から除外
             const monthNum = parseInt(t.date.substring(5, 7), 10);
             if (monthNum >= 1 && monthNum <= 12) {
                 const idx = monthNum - 1;
-                const salesInT = (t.credits || []).filter((c: any) => allSalesCodes.includes(c.code)).reduce((sum: number, c: any) => sum + c.amount, 0);
+                const salesInT = (t.credits || []).filter((c: any) => allSalesCodesForMonthly.includes(c.code)).reduce((sum: number, c: any) => sum + c.amount, 0);
                 monthlySales[idx] += salesInT;
 
                 const purchasesInT = (t.debits || []).filter((d: any) => allPurchaseCodes.includes(d.code)).reduce((sum: number, d: any) => sum + d.amount, 0);
