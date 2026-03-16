@@ -535,21 +535,21 @@
     "id": 391,
     "code": 391,
     "name": "受取利息",
-    "type": "liability",
+    "type": "revenue",
     "tax_type": "tax_free"
   },
   {
     "id": 392,
     "code": 392,
     "name": "受取配当",
-    "type": "liability",
+    "type": "revenue",
     "tax_type": "tax_free"
   },
   {
     "id": 393,
     "code": 393,
     "name": "資産売却益",
-    "type": "liability",
+    "type": "revenue",
     "tax_type": "tax_free"
   },
   {

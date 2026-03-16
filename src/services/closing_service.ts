@@ -5,10 +5,10 @@ export async function closeFiscalYear(year: number): Promise<boolean> {
         // 1. 指定年度の終了日時（残高スナップショット用）
         const endStr = `${year}-12-31T23:59:59`;
 
-        // 3. 全アカウントを取得
+        // 3. 全アカウントを取得 (事業主貸(291) と 事業主借(390) は翌年に繰り越さず元入金と相殺するため除外)
         const accounts = await db.accounts.toArray();
-        const assetAccounts = accounts.filter(a => a.type === 'asset');
-        const liabilityAccounts = accounts.filter(a => a.type === 'liability');
+        const assetAccounts = accounts.filter(a => a.type === 'asset' && a.code !== 291);
+        const liabilityAccounts = accounts.filter(a => a.type === 'liability' && a.code !== 390);
 
         // 4. 残高を計算（資産と負債のみ引き継ぐ）
         const endingBalances: Record<number, number> = {};

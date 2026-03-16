@@ -142,7 +142,7 @@ export default function Report() {
                     deltaCapital += accountBalancesKishu[a.code];
                     accountBalancesKishu[a.code] = 0;
                 } else if (a.code === 310 || a.name.includes("事業主借")) {
-                    deltaCapital -= accountBalancesKishu[a.code];
+                    deltaCapital += accountBalancesKishu[a.code];
                     accountBalancesKishu[a.code] = 0;
                 }
             });
@@ -151,7 +151,7 @@ export default function Report() {
             const capitalAcct = accounts.find(a => a.name.includes("元入金"));
             if (capitalAcct) capitalCode = capitalAcct.code;
             if (accounts.some(a => a.code === capitalCode)) {
-                accountBalancesKishu[capitalCode] -= deltaCapital; // 修正点 (利益余剰は負債/資本の貸方側に直接足すため引く)
+                accountBalancesKishu[capitalCode] += deltaCapital;
             }
         });
 
