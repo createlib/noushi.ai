@@ -305,8 +305,9 @@ export default function Report() {
         const plKajiShouhi = plSales.find(a => a.code === 583);
         const kajiShouhiTotal = plKajiShouhi ? plKajiShouhi.balance : 0;
         
+        const plZatsu = plSales.find(a => a.code === 590);
         // その他の収入（雑収入、受取利息など）の合計
-        const zatsuShuunyuuTotal = plOtherIncome.reduce((sum, a) => sum + a.balance, 0);
+        const zatsuShuunyuuTotal = (plZatsu ? plZatsu.balance : 0) + plOtherIncome.reduce((sum, a) => sum + a.balance, 0);
 
         transactions.forEach(t => {
             if (isOpeningBalanceEntry(t)) return; // 期首残高仕訳は月別合計から除外
@@ -703,7 +704,7 @@ export default function Report() {
                                         </Stack>
                                         <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
                                             <Typography variant="body2" fontWeight="bold" color="text.secondary">月別売上 計</Typography>
-                                            <Typography variant="body2" fontWeight="bold" color="text.secondary">¥{(monthlySales.reduce((a, b) => a + b, 0)).toLocaleString()}</Typography>
+                                            <Typography variant="body2" fontWeight="bold" color="text.secondary">¥{(totalSales - kajiShouhiTotal - zatsuShuunyuuTotal).toLocaleString()}</Typography>
                                         </Box>
                                         <Box display="flex" justifyContent="space-between" pt={0.5}>
                                             <Typography variant="body2" fontWeight="bold" color="text.secondary">家事消費等</Typography>
@@ -715,7 +716,7 @@ export default function Report() {
                                         </Box>
                                         <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
                                             <Typography variant="body2" fontWeight="bold">売上 (収入) 金額 計</Typography>
-                                            <Typography variant="body2" fontWeight="bold">¥{(monthlySales.reduce((a, b) => a + b, 0) + kajiShouhiTotal + zatsuShuunyuuTotal).toLocaleString()}</Typography>
+                                            <Typography variant="body2" fontWeight="bold">¥{totalSales.toLocaleString()}</Typography>
                                         </Box>
                                     </Box>
 
