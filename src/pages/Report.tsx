@@ -107,23 +107,12 @@ export default function Report() {
                 pastTransactionsByYear[tYear].push(t);
             } else if (tYear === sYear && isOpeningBalanceEntry(t)) {
                 // 当期の期首設定仕訳: current には含めず、別途 kishu の残高に直接加算する
-                let capitalCode = 300;
-                const capitalAcct = accounts.find(a => a.name.includes("元入金"));
-                if (capitalAcct) capitalCode = capitalAcct.code;
-                
+
                 (t.debits || []).forEach((d: any) => {
-                    if (d.code === 291 || d.code === 390 || accounts.find(a => a.code === d.code)?.name.includes("事業主")) {
-                        accountBalancesKishu[capitalCode] += d.amount; // 借方(Debit)は通常通りプラス加算 (表示時に負債計として反転されるため)
-                    } else {
-                        accountBalancesKishu[d.code] += d.amount;
-                    }
+                    accountBalancesKishu[d.code] += d.amount;
                 });
                 (t.credits || []).forEach((c: any) => {
-                    if (c.code === 291 || c.code === 390 || accounts.find(a => a.code === c.code)?.name.includes("事業主")) {
-                        accountBalancesKishu[capitalCode] -= c.amount; // 貸方(Credit)は通常通りマイナス加算
-                    } else {
-                        accountBalancesKishu[c.code] -= c.amount;
-                    }
+                    accountBalancesKishu[c.code] -= c.amount;
                 });
             } else if (tYear === sYear) {
                 // 通常の当期取引
@@ -149,6 +138,12 @@ export default function Report() {
             accounts.forEach(a => {
                 if (isPLAccount(a)) {
                     deltaCapital += accountBalancesKishu[a.code];
+                    accountBalancesKishu[a.code] = 0;
+                } else if (a.code === 210 || a.code === 291 || a.name.includes("事業主貸")) {
+                    deltaCapital += accountBalancesKishu[a.code]; // 事業主貸(借方=プラス値)を足すことで、元入金(貸方=マイナス値)の絶対値を減らす(減資)
+                    accountBalancesKishu[a.code] = 0;
+                } else if (a.code === 310 || a.code === 390 || a.name.includes("事業主借")) {
+                    deltaCapital += accountBalancesKishu[a.code]; // 事業主借(貸方=マイナス値)を足すことで、元入金(貸方=マイナス値)の絶対値を増やす(増資)
                     accountBalancesKishu[a.code] = 0;
                 }
             });
