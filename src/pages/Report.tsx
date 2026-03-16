@@ -206,13 +206,16 @@ export default function Report() {
         const bsLiabilities = getFilteredAccounts('BS', 'credit');
 
         // 売上関係
-        const salesCodes = [500, 501, 580, 581, 583, 590, 5999]; // 一般売上
+        // 一般売上には「雑収入(590)」「家事消費(583)」は含めない（別枠で集計するため）
+        const salesCodes = [500, 501, 580, 581, 5999]; // 一般売上
         const agrSalesCodes = [5100, 5101, 5102]; // 農業売上
         const reSalesCodes = [5200, 5201, 5202]; // 不動産売上
 
         const plSales = plIncomes.filter(a => salesCodes.includes(a.code));
         const plAgrSales = plIncomes.filter(a => agrSalesCodes.includes(a.code));
         const plRESales = plIncomes.filter(a => reSalesCodes.includes(a.code));
+
+        // その他の業務収入（雑収入 590, 家事消費 583, 受取利息 391 など）
         const plOtherIncome = plIncomes.filter(a => !salesCodes.includes(a.code) && !agrSalesCodes.includes(a.code) && !reSalesCodes.includes(a.code) && a.code !== 650 && a.code !== 690);
 
         // 売上原価 (一般)
@@ -302,12 +305,11 @@ export default function Report() {
         const allSalesCodesForMonthly = allSalesCodes.filter(c => c !== 583 && c !== 590 && c !== 5999);
         const allPurchaseCodes = [610, 5300, 8000]; // 一般仕入, 製造原材料仕入, 農業種苗等
 
-        const plKajiShouhi = plSales.find(a => a.code === 583);
+        const plKajiShouhi = plOtherIncome.find(a => a.code === 583);
         const kajiShouhiTotal = plKajiShouhi ? plKajiShouhi.balance : 0;
         
-        const plZatsu = plSales.find(a => a.code === 590);
-        // その他の収入（雑収入、受取利息など）の合計
-        const zatsuShuunyuuTotal = (plZatsu ? plZatsu.balance : 0) + plOtherIncome.reduce((sum, a) => sum + a.balance, 0);
+        // その他の収入（雑収入590、受取利息391など）の合計（家事消費583を除く）
+        const zatsuShuunyuuTotal = plOtherIncome.filter(a => a.code !== 583).reduce((sum, a) => sum + a.balance, 0);
 
         transactions.forEach(t => {
             if (isOpeningBalanceEntry(t)) return; // 期首残高仕訳は月別合計から除外
@@ -704,7 +706,7 @@ export default function Report() {
                                         </Stack>
                                         <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
                                             <Typography variant="body2" fontWeight="bold" color="text.secondary">月別売上 計</Typography>
-                                            <Typography variant="body2" fontWeight="bold" color="text.secondary">¥{(totalSales - kajiShouhiTotal - zatsuShuunyuuTotal).toLocaleString()}</Typography>
+                                            <Typography variant="body2" fontWeight="bold" color="text.secondary">¥{plSales.reduce((sum, a) => sum + a.balance, 0).toLocaleString()}</Typography>
                                         </Box>
                                         <Box display="flex" justifyContent="space-between" pt={0.5}>
                                             <Typography variant="body2" fontWeight="bold" color="text.secondary">家事消費等</Typography>
