@@ -84,6 +84,11 @@ export async function performSync(uid: string): Promise<void> {
         if (remoteData!.accounts && remoteData!.accounts.length > 0) {
             await db.accounts.clear();
             await db.accounts.bulkPut(remoteData!.accounts);
+
+            // 緊急パッチ: クラウドから古いスキーマ（受取利息＝負債など）が降ってきた場合の強制修正
+            await db.accounts.where('code').anyOf([391, 392, 393]).modify((acc: any) => {
+                acc.type = 'revenue';
+            });
         }
 
         // 仕訳ヘッダ
