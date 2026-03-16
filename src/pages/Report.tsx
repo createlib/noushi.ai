@@ -150,12 +150,6 @@ export default function Report() {
                 if (isPLAccount(a)) {
                     deltaCapital += accountBalancesKishu[a.code];
                     accountBalancesKishu[a.code] = 0;
-                } else if (a.code === 210 || a.name.includes("事業主貸")) {
-                    deltaCapital += accountBalancesKishu[a.code];
-                    accountBalancesKishu[a.code] = 0;
-                } else if (a.code === 310 || a.name.includes("事業主借")) {
-                    deltaCapital += accountBalancesKishu[a.code];
-                    accountBalancesKishu[a.code] = 0;
                 }
             });
 
