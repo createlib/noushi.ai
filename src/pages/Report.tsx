@@ -90,13 +90,19 @@ export default function Report() {
     try {
         const pastTransactionsByYear: Record<string, any[]> = {};
 
+        const isOpeningBalanceEntry = (t: any) => {
+            const hasKeyword = (t.description || '').includes('期首') || (t.description || '').includes('開始') || (t.description || '').includes('繰越');
+            const hasCapitalRow = (t.debits || []).some((d: any) => d.code === 400) || (t.credits || []).some((c: any) => c.code === 400);
+            return hasKeyword || hasCapitalRow;
+        }
+
         allTransactions.forEach(t => {
             if (!t.date) return;
             const tYear = t.date.substring(0, 4);
             const sYear = String(selectedYear);
 
 
-            if (tYear < sYear) {
+            if (tYear < sYear || (tYear === sYear && isOpeningBalanceEntry(t))) {
                 if (!pastTransactionsByYear[tYear]) pastTransactionsByYear[tYear] = [];
                 pastTransactionsByYear[tYear].push(t);
             } else if (tYear === sYear) {
@@ -272,14 +278,17 @@ export default function Report() {
         const allSalesCodes = [...salesCodes, ...agrSalesCodes, ...reSalesCodes];
         const allPurchaseCodes = [610, 5300, 8000]; // 一般仕入, 製造原材料仕入, 農業種苗等
 
+        const kajiShouhiTotal = transactions.reduce((sum, t) => sum + (t.credits || []).filter((c: any) => c.code === 583).reduce((s: number, c: any) => s + c.amount, 0), 0);
+        const zatsuShuunyuuTotal = transactions.reduce((sum, t) => sum + (t.credits || []).filter((c: any) => c.code === 590).reduce((s: number, c: any) => s + c.amount, 0), 0);
+        
         transactions.forEach(t => {
             const monthNum = parseInt(t.date.substring(5, 7), 10);
             if (monthNum >= 1 && monthNum <= 12) {
                 const idx = monthNum - 1;
-                const salesInT = (t.credits || []).filter(c => allSalesCodes.includes(c.code)).reduce((sum, c) => sum + c.amount, 0);
+                const salesInT = (t.credits || []).filter((c: any) => allSalesCodes.includes(c.code)).reduce((sum: number, c: any) => sum + c.amount, 0);
                 monthlySales[idx] += salesInT;
 
-                const purchasesInT = (t.debits || []).filter(d => allPurchaseCodes.includes(d.code)).reduce((sum, d) => sum + d.amount, 0);
+                const purchasesInT = (t.debits || []).filter((d: any) => allPurchaseCodes.includes(d.code)).reduce((sum: number, d: any) => sum + d.amount, 0);
                 monthlyPurchases[idx] += purchasesInT;
             }
         });
@@ -592,6 +601,8 @@ export default function Report() {
             mfgCostOfGoodsManufactured,
             monthlySales,
             monthlyPurchases,
+            kajiShouhiTotal,
+            zatsuShuunyuuTotal,
             salaryTotal,
             familySalaryTotal,
             badDebtProvisionTotal,
@@ -662,6 +673,18 @@ export default function Report() {
                                                 </Box>
                                             ))}
                                         </Stack>
+                                        <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
+                                            <Typography variant="body2" fontWeight="bold" color="text.secondary">月別売上 計</Typography>
+                                            <Typography variant="body2" fontWeight="bold" color="text.secondary">¥{(totalSales - kajiShouhiTotal - zatsuShuunyuuTotal).toLocaleString()}</Typography>
+                                        </Box>
+                                        <Box display="flex" justifyContent="space-between" pt={0.5}>
+                                            <Typography variant="body2" fontWeight="bold" color="text.secondary">家事消費等</Typography>
+                                            <Typography variant="body2" fontWeight="bold" color="text.secondary">¥{kajiShouhiTotal.toLocaleString()}</Typography>
+                                        </Box>
+                                        <Box display="flex" justifyContent="space-between" pt={0.5}>
+                                            <Typography variant="body2" fontWeight="bold" color="text.secondary">雑収入</Typography>
+                                            <Typography variant="body2" fontWeight="bold" color="text.secondary">¥{zatsuShuunyuuTotal.toLocaleString()}</Typography>
+                                        </Box>
                                         <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
                                             <Typography variant="body2" fontWeight="bold">売上 (収入) 金額 計</Typography>
                                             <Typography variant="body2" fontWeight="bold">¥{totalSales.toLocaleString()}</Typography>

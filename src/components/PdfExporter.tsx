@@ -62,6 +62,8 @@ interface PdfExportConfig {
     mfgCostOfGoodsManufactured: number;
     monthlySales: number[];
     monthlyPurchases: number[];
+    kajiShouhiTotal: number;
+    zatsuShuunyuuTotal: number;    
     salaryTotal: number;
     familySalaryTotal: number;
     badDebtProvisionTotal: number;
@@ -380,6 +382,21 @@ export const PdfExporter: React.FC<{ data: PdfExportConfig }> = ({ data }) => {
                                             <tr style={{ fontWeight: 'bold', borderTop: '2px solid black' }}>
                                                 <td style={{ padding: '4px', borderRight: '1px solid black', textAlign: 'center' }}>計</td>
                                                 <td style={{ padding: '4px', borderRight: '1px solid black', textAlign: 'right' }}>{data.monthlySales.reduce((a, b) => a + b, 0).toLocaleString()}</td>
+                                                <td style={{ padding: '4px', textAlign: 'right' }}>{data.monthlyPurchases.reduce((a, b) => a + b, 0).toLocaleString()}</td>
+                                            </tr>
+                                            <tr style={{ borderTop: '1px dashed #ccc' }}>
+                                                <td style={{ padding: '4px', borderRight: '1px solid black', textAlign: 'center' }}>家事消費等</td>
+                                                <td style={{ padding: '4px', borderRight: '1px solid black', textAlign: 'right' }}>{data.kajiShouhiTotal.toLocaleString()}</td>
+                                                <td style={{ padding: '4px', textAlign: 'right' }}></td>
+                                            </tr>
+                                            <tr style={{ borderTop: '1px dashed #ccc' }}>
+                                                <td style={{ padding: '4px', borderRight: '1px solid black', textAlign: 'center' }}>雑収入</td>
+                                                <td style={{ padding: '4px', borderRight: '1px solid black', textAlign: 'right' }}>{data.zatsuShuunyuuTotal.toLocaleString()}</td>
+                                                <td style={{ padding: '4px', textAlign: 'right' }}></td>
+                                            </tr>
+                                            <tr style={{ fontWeight: 'bold', borderTop: '2px solid black' }}>
+                                                <td style={{ padding: '4px', borderRight: '1px solid black', textAlign: 'center' }}>合計</td>
+                                                <td style={{ padding: '4px', borderRight: '1px solid black', textAlign: 'right' }}>{data.totalSales.toLocaleString()}</td>
                                                 <td style={{ padding: '4px', textAlign: 'right' }}>{data.monthlyPurchases.reduce((a, b) => a + b, 0).toLocaleString()}</td>
                                             </tr>
                                         </tbody>
