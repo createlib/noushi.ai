@@ -16,10 +16,14 @@ function generateUUID() {
 
 export async function initDb() {
     // 1. アカウント（勘定科目）の初期化
-    // 常に最新のJSONで上書きする（古いスキーマ type: 'debit' 等が残るバグを防ぐため）
     console.log('Refreshing account data to ensure v5 schema types (revenue/expense)...');
     await db.accounts.clear();
     await db.accounts.bulkPut(accountsData);
+    
+    // 緊急パッチ: 万が一 bulkPut がコケた場合や古いIndexedDB状態の影響で 391: 受取利息 等が liability のままの環境を強制修正
+    await db.accounts.where('code').anyOf([391, 392, 393]).modify((acc: any) => {
+        acc.type = 'revenue';
+    });
     console.log('Accounts seeded:', accountsData.length);
 
     // 2. 旧バージョン（フラットなTransaction構造）からの移行
