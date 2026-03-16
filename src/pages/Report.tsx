@@ -675,7 +675,7 @@ export default function Report() {
                                         </Stack>
                                         <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
                                             <Typography variant="body2" fontWeight="bold" color="text.secondary">月別売上 計</Typography>
-                                            <Typography variant="body2" fontWeight="bold" color="text.secondary">¥{(totalSales - kajiShouhiTotal - zatsuShuunyuuTotal).toLocaleString()}</Typography>
+                                            <Typography variant="body2" fontWeight="bold" color="text.secondary">¥{(monthlySales.reduce((a, b) => a + b, 0)).toLocaleString()}</Typography>
                                         </Box>
                                         <Box display="flex" justifyContent="space-between" pt={0.5}>
                                             <Typography variant="body2" fontWeight="bold" color="text.secondary">家事消費等</Typography>
@@ -687,7 +687,7 @@ export default function Report() {
                                         </Box>
                                         <Box display="flex" justifyContent="space-between" mt={1} pt={1} borderTop={1} borderColor="divider">
                                             <Typography variant="body2" fontWeight="bold">売上 (収入) 金額 計</Typography>
-                                            <Typography variant="body2" fontWeight="bold">¥{totalSales.toLocaleString()}</Typography>
+                                            <Typography variant="body2" fontWeight="bold">¥{(monthlySales.reduce((a, b) => a + b, 0) + kajiShouhiTotal + zatsuShuunyuuTotal).toLocaleString()}</Typography>
                                         </Box>
                                     </Box>
 

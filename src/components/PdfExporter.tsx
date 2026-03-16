@@ -396,7 +396,7 @@ export const PdfExporter: React.FC<{ data: PdfExportConfig }> = ({ data }) => {
                                             </tr>
                                             <tr style={{ fontWeight: 'bold', borderTop: '2px solid black' }}>
                                                 <td style={{ padding: '4px', borderRight: '1px solid black', textAlign: 'center' }}>合計</td>
-                                                <td style={{ padding: '4px', borderRight: '1px solid black', textAlign: 'right' }}>{data.totalSales.toLocaleString()}</td>
+                                                <td style={{ padding: '4px', borderRight: '1px solid black', textAlign: 'right' }}>{(data.monthlySales.reduce((a, b) => a + b, 0) + data.kajiShouhiTotal + data.zatsuShuunyuuTotal).toLocaleString()}</td>
                                                 <td style={{ padding: '4px', textAlign: 'right' }}>{data.monthlyPurchases.reduce((a, b) => a + b, 0).toLocaleString()}</td>
                                             </tr>
                                         </tbody>
