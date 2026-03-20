@@ -228,7 +228,7 @@ export default function Ledger() {
                             const creNames = creditsArray.map(c => accounts.find(a => String(a.code || a.id) === String(c.account_id))?.name || '不明').join(',');
 
                             return (
-                                <TableRow key={j.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                                <TableRow key={j.id} hover sx={{ bgcolor: j.is_private ? '#e0f2fe' : 'inherit', '&:last-child td, &:last-child th': { border: 0 } }}>
                                     <TableCell padding="checkbox">
                                         <Checkbox
                                             color="primary"
@@ -257,6 +257,7 @@ export default function Ledger() {
                                         {creAmount.toLocaleString()}
                                     </TableCell>
                                     <TableCell sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' }, color: 'text.secondary', maxWidth: '300px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'top' }}>
+                                        {j.is_private && <Typography component="span" variant="caption" sx={{ bgcolor: '#bae6fd', color: '#0369a1', px: 0.5, py: 0.2, borderRadius: 1, mr: 1, fontWeight: 'bold' }}>私的</Typography>}
                                         {j.description || ''}
                                     </TableCell>
                                     <TableCell align="center" sx={{ whiteSpace: 'nowrap', verticalAlign: 'top', py: 0.5 }}>

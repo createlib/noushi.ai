@@ -1498,6 +1498,153 @@
     "tax_type": "taxable10"
   },
   {
+    "id": 9901,
+    "code": 9901,
+    "name": "食費",
+    "type": "expense",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9902,
+    "code": 9902,
+    "name": "日用品費",
+    "type": "expense",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9903,
+    "code": 9903,
+    "name": "家賃",
+    "type": "expense",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9904,
+    "code": 9904,
+    "name": "電気代",
+    "type": "expense",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9905,
+    "code": 9905,
+    "name": "ガス代",
+    "type": "expense",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9906,
+    "code": 9906,
+    "name": "水道代",
+    "type": "expense",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9907,
+    "code": 9907,
+    "name": "通信費",
+    "type": "expense",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9908,
+    "code": 9908,
+    "name": "保険料",
+    "type": "expense",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9909,
+    "code": 9909,
+    "name": "交通費",
+    "type": "expense",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9910,
+    "code": 9910,
+    "name": "車費",
+    "type": "expense",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9911,
+    "code": 9911,
+    "name": "医療費",
+    "type": "expense",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9912,
+    "code": 9912,
+    "name": "被服費",
+    "type": "expense",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9913,
+    "code": 9913,
+    "name": "美容費",
+    "type": "expense",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9914,
+    "code": 9914,
+    "name": "交際費",
+    "type": "expense",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9915,
+    "code": 9915,
+    "name": "娯楽費",
+    "type": "expense",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9916,
+    "code": 9916,
+    "name": "教育・自己投資",
+    "type": "expense",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9917,
+    "code": 9917,
+    "name": "サブスク",
+    "type": "expense",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9918,
+    "code": 9918,
+    "name": "特別支出",
+    "type": "expense",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9919,
+    "code": 9919,
+    "name": "税金",
+    "type": "expense",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9920,
+    "code": 9920,
+    "name": "貯蓄・投資",
+    "type": "expense",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9921,
+    "code": 9921,
+    "name": "予備費",
+    "type": "expense",
+    "tax_type": "non_taxable"
+  },
+  {
     "id": 9999,
     "code": 9999,
     "name": "不明",

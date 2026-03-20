@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Box, Typography, Button, Paper, Alert, Stack, CircularProgress } from '@mui/material';
+import { Box, Typography, Button, Paper, Alert, Stack, CircularProgress, FormControlLabel, Switch } from '@mui/material';
 import { UploadFile, Download } from '@mui/icons-material';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
@@ -8,6 +8,7 @@ import { db, type Account } from '../db/db';
 
 export default function CSVImport() {
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isPrivateImport, setIsPrivateImport] = useState(false);
     const [successMsg, setSuccessMsg] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -146,6 +147,7 @@ export default function CSVImport() {
                     id: journalId,
                     date: parsedDate,
                     description: rawDesc,
+                    is_private: isPrivateImport,
                     status: 'posted',
                     createdAt: now,
                     updatedAt: now
@@ -259,6 +261,13 @@ export default function CSVImport() {
                 )}
 
                 <Box textAlign="center">
+                    <Box display="inline-block" mb={2}>
+                        <FormControlLabel
+                            control={<Switch color="secondary" checked={isPrivateImport} onChange={(e) => setIsPrivateImport(e.target.checked)} disabled={isProcessing} />}
+                            label={<Typography variant="body2" fontWeight="bold" color={isPrivateImport ? "secondary.dark" : "text.secondary"}>このCSVの仕訳をすべてプライベート（帳簿除外）として取り込む</Typography>}
+                        />
+                    </Box>
+                    <br />
                     <Button
                         variant="contained"
                         size="large"

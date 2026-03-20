@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Box, Typography, Button, Paper, TextField, CircularProgress, Snackbar, Alert, IconButton, Card, CardMedia, CardContent, Dialog } from '@mui/material';
+import { Box, Typography, Button, Paper, TextField, CircularProgress, Snackbar, Alert, IconButton, Card, CardMedia, CardContent, Dialog, FormControlLabel, Switch } from '@mui/material';
 import { CameraAlt, UploadFile, AddCircleOutline, RemoveCircleOutline, CheckCircle, ErrorOutline, Close } from '@mui/icons-material';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
@@ -23,6 +23,7 @@ export default function CameraInput() {
     const [reviewingItem, setReviewingItem] = useState<{ id: string, type: 'camera' | 'csv' } | null>(null);
     const [successMsg, setSuccessMsg] = useState('');
     const [editingResult, setEditingResult] = useState<AIResult | null>(null);
+    const [editingIsPrivate, setEditingIsPrivate] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
     const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -89,6 +90,7 @@ export default function CameraInput() {
         if (item.result) {
             setReviewingItem({ id: item.id, type });
             setEditingResult(JSON.parse(JSON.stringify(item.result)));
+            setEditingIsPrivate(false);
         }
     };
 
@@ -134,6 +136,7 @@ export default function CameraInput() {
                     id: journalId,
                     date: editingResult.date || dayjs().format('YYYY-MM-DD'),
                     description: editingResult.description || '',
+                    is_private: editingIsPrivate,
                     status: 'posted',
                     createdAt: now,
                     updatedAt: now,
@@ -382,12 +385,19 @@ export default function CameraInput() {
                                 <IconButton onClick={closeReview}><Close /></IconButton>
                             </Box>
 
-                            <TextField
-                                fullWidth margin="dense" label="日付" type="date"
-                                InputLabelProps={{ shrink: true }}
-                                value={editingResult.date} sx={{ mb: 3 }}
-                                onChange={(e) => setEditingResult({ ...editingResult, date: e.target.value })}
-                            />
+                            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                                <TextField
+                                    margin="dense" label="日付" type="date"
+                                    InputLabelProps={{ shrink: true }}
+                                    value={editingResult.date}
+                                    sx={{ flex: 1, mr: 2 }}
+                                    onChange={(e) => setEditingResult({ ...editingResult, date: e.target.value })}
+                                />
+                                <FormControlLabel
+                                    control={<Switch color="secondary" checked={editingIsPrivate} onChange={(e) => setEditingIsPrivate(e.target.checked)} />}
+                                    label={<Typography variant="body2" fontWeight="bold" color={editingIsPrivate ? "secondary.dark" : "text.secondary"}>プライベートな支出等（帳簿除外）</Typography>}
+                                />
+                            </Box>
 
                             <Box mb={1.5} p={1.5} bgcolor="#ecfdf5" borderRadius={2} display="flex" justifyContent="space-between" alignItems="center">
                                 <Typography variant="subtitle2" color="#059669" fontWeight="bold">借方 (Debit)</Typography>

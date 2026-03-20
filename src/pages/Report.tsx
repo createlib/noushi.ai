@@ -41,7 +41,7 @@ export default function Report() {
             list.push(line);
         }
 
-        return allJournalsLive.filter(j => !j.deletedAt).map(j => {
+        return allJournalsLive.filter(j => !j.deletedAt && !j.is_private).map(j => {
             const lines = linesByJournalId.get(j.id) || [];
             return {
                 id: j.id,

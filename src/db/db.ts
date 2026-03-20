@@ -15,6 +15,7 @@ export interface Journal {
     date: string; // YYYY-MM-DD
     description: string;
     status: 'draft' | 'posted';
+    is_private?: boolean;
     createdAt: number;
     updatedAt: number;
     deletedAt?: number;

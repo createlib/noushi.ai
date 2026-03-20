@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, Typography, IconButton, Alert } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, Typography, IconButton, Alert, FormControlLabel, Switch } from '@mui/material';
 import { AddCircleOutline, RemoveCircleOutline } from '@mui/icons-material';
 import { useLiveQuery } from 'dexie-react-hooks';
 import dayjs from 'dayjs';
@@ -21,6 +21,7 @@ export default function TransactionEditorDialog({ open, onClose, journalToEdit }
     const [debits, setDebits] = useState<{ code: number; amount: number }[]>([{ code: 100, amount: 0 }]);
     const [credits, setCredits] = useState<{ code: number; amount: number }[]>([{ code: 100, amount: 0 }]);
     const [description, setDescription] = useState('');
+    const [isPrivate, setIsPrivate] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
     const [isLoadingLines, setIsLoadingLines] = useState(false);
 
@@ -30,6 +31,7 @@ export default function TransactionEditorDialog({ open, onClose, journalToEdit }
             if (journalToEdit) {
                 setDate(journalToEdit.date);
                 setDescription(journalToEdit.description || '');
+                setIsPrivate(!!journalToEdit.is_private);
                 setIsLoadingLines(true);
                 // Load existing lines
                 db.journal_lines.where('journal_id').equals(journalToEdit.id).toArray().then(lines => {
@@ -49,6 +51,7 @@ export default function TransactionEditorDialog({ open, onClose, journalToEdit }
                 setDebits([{ code: 100, amount: 0 }]);
                 setCredits([{ code: 400, amount: 0 }]);
                 setDescription('');
+                setIsPrivate(false);
             }
         }
     }, [open, journalToEdit]);
@@ -86,6 +89,7 @@ export default function TransactionEditorDialog({ open, onClose, journalToEdit }
                 journalId,
                 date,
                 description,
+                is_private: isPrivate,
                 now,
                 isEdit: !!journalToEdit,
                 debitsSnapshot: [...debits],
@@ -105,6 +109,7 @@ export default function TransactionEditorDialog({ open, onClose, journalToEdit }
                                 await db.journals.update(savePayload.journalId, {
                                     date: savePayload.date,
                                     description: savePayload.description,
+                                    is_private: savePayload.is_private,
                                     updatedAt: savePayload.now
                                 });
                                 const existingLines = await db.journal_lines.where('journal_id').equals(savePayload.journalId).toArray();
@@ -115,6 +120,7 @@ export default function TransactionEditorDialog({ open, onClose, journalToEdit }
                                     id: savePayload.journalId,
                                     date: savePayload.date,
                                     description: savePayload.description,
+                                    is_private: savePayload.is_private,
                                     status: 'posted',
                                     createdAt: savePayload.now,
                                     updatedAt: savePayload.now
@@ -175,14 +181,20 @@ export default function TransactionEditorDialog({ open, onClose, journalToEdit }
             <DialogTitle>{journalToEdit ? '仕訳の編集' : '手動で仕訳を追加'}</DialogTitle>
             <DialogContent dividers>
                 {errorMsg && <Alert severity="error" sx={{ mb: 2 }}>{errorMsg}</Alert>}
-                <TextField
-                    fullWidth margin="dense" label="日付" type="date"
-                    InputLabelProps={{ shrink: true }}
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    sx={{ mb: 3 }}
-                    disabled={isLoadingLines}
-                />
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                    <TextField
+                        margin="dense" label="日付" type="date"
+                        InputLabelProps={{ shrink: true }}
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        disabled={isLoadingLines}
+                        sx={{ flex: 1, mr: 2 }}
+                    />
+                    <FormControlLabel
+                        control={<Switch color="secondary" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} disabled={isLoadingLines} />}
+                        label={<Typography variant="body2" fontWeight="bold" color={isPrivate ? "secondary.dark" : "text.secondary"}>プライベートな支出等（帳簿除外）</Typography>}
+                    />
+                </Box>
 
                 <Box mb={1.5} p={1.5} bgcolor="#ecfdf5" borderRadius={2} display="flex" justifyContent="space-between" alignItems="center">
                     <Typography variant="subtitle2" color="#059669" fontWeight="bold">借方 (Debit)</Typography>
