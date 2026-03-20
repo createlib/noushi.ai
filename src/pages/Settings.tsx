@@ -15,6 +15,7 @@ import 'dexie-export-import';
 import { forceUploadSync } from '../services/sync_service';
 import { useFiscalYear } from '../contexts/FiscalYearContext';
 import { closeFiscalYear, checkIsYearClosed } from '../services/closing_service';
+import { initDb } from '../db/init';
 
 export default function Settings() {
     const { userId } = useAuth();
@@ -423,10 +424,27 @@ export default function Settings() {
                 </AccordionSummary>
                 <AccordionDetails sx={{ pt: 3 }}>
                     <Typography variant="body2" color="text.secondary" gutterBottom>
+                        最新の勘定科目一覧（accounts.json）を強制的に再読み込みします。
+                        <br />（※登録済みの仕訳データは消えません）
+                    </Typography>
+                    <Box mt={1} mb={4}>
+                        <Button variant="outlined" color="primary" onClick={async () => {
+                            try {
+                                await initDb();
+                                alert('勘定科目を最新に更新しました。');
+                            } catch (e: any) {
+                                alert('更新エラー: ' + e.message);
+                            }
+                        }}>
+                            勘定科目の再読み込み
+                        </Button>
+                    </Box>
+
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
                         現在のアカウントからログアウトし、別のアカウントで再ログインします。<br />
                         (NOAHユーザーID: <Box component="span" sx={{ fontFamily: 'monospace', userSelect: 'all', fontSize: '1.1em', fontWeight: 'bold' }}>{userId || '未取得'}</Box>)
                     </Typography>
-                    <Box mt={3}>
+                    <Box mt={2}>
                         <Button variant="outlined" color="error" onClick={handleLogout}>
                             ログアウト
                         </Button>
