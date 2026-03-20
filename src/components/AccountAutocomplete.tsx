@@ -9,6 +9,7 @@ interface AccountAutocompleteProps {
     label?: string;
     disabled?: boolean;
     size?: 'small' | 'medium';
+    filterPrivate?: boolean;
 }
 
 const filterOptions = createFilterOptions<Account>({
@@ -22,14 +23,29 @@ export const AccountAutocomplete: React.FC<AccountAutocompleteProps> = ({
     onChange,
     label = '科目',
     disabled = false,
-    size = 'small'
+    size = 'small',
+    filterPrivate
 }) => {
-    // value から該当のアカウントオブジェクトを見つける
+    // 勘定科目のフィルタリング（プライベート用コードは9800〜9989とする）
+    const filteredAccounts = React.useMemo(() => {
+        if (filterPrivate === undefined) return accounts;
+        return accounts.filter(a => {
+            const codeNum = typeof a.code === 'number' ? a.code : parseInt(a.code as any, 10);
+            if (isNaN(codeNum)) return true; // コードがない場合はとりあえず残す
+            if (filterPrivate) {
+                return codeNum >= 9800 && codeNum <= 9989;
+            } else {
+                return codeNum < 9800 || codeNum > 9989;
+            }
+        });
+    }, [accounts, filterPrivate]);
+
+    // value から該当のアカウントオブジェクトを見つける（フィルタ外のものでも選択状態は維持できるように全体から探す）
     const selectedAccount = accounts.find(a => a.code === value || a.id === value) || null;
 
     return (
         <Autocomplete
-            options={accounts}
+            options={filteredAccounts}
             getOptionLabel={(option) => option ? `${option.code || option.id}: ${option.name || ''}` : ''}
             isOptionEqualToValue={(option, val) => {
                 if (!option || !val) return option === val;

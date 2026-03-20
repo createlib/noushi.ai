@@ -1498,6 +1498,41 @@
     "tax_type": "taxable10"
   },
   {
+    "id": 9801,
+    "code": 9801,
+    "name": "現金（家計）",
+    "type": "asset",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9802,
+    "code": 9802,
+    "name": "普通預金（家計）",
+    "type": "asset",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9803,
+    "code": 9803,
+    "name": "クレジットカード（家計）",
+    "type": "liability",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9804,
+    "code": 9804,
+    "name": "その他の借入・ローン（家計）",
+    "type": "liability",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9890,
+    "code": 9890,
+    "name": "元入金（家計）",
+    "type": "capital",
+    "tax_type": "non_taxable"
+  },
+  {
     "id": 9901,
     "code": 9901,
     "name": "食費",
@@ -1650,5 +1685,40 @@
     "name": "不明",
     "type": "expense",
     "tax_type": "taxable10"
+  },
+  {
+    "id": 9951,
+    "code": 9951,
+    "name": "給料・給与",
+    "type": "revenue",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9952,
+    "code": 9952,
+    "name": "副業収入（個人）",
+    "type": "revenue",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9953,
+    "code": 9953,
+    "name": "お小遣い・仕送り",
+    "type": "revenue",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9954,
+    "code": 9954,
+    "name": "臨時収入",
+    "type": "revenue",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9955,
+    "code": 9955,
+    "name": "資産運用・配当益",
+    "type": "revenue",
+    "tax_type": "non_taxable"
   }
 ]

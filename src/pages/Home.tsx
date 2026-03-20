@@ -21,6 +21,9 @@ import RunwayForecast from '../components/analytics/RunwayForecast';
 import HealthRadar from '../components/analytics/HealthRadar';
 import SubscriptionScanner from '../components/analytics/SubscriptionScanner';
 import AnomalyDetector from '../components/analytics/AnomalyDetector';
+import HouseholdSummary from '../components/analytics/HouseholdSummary';
+import HouseholdWasteScanner from '../components/analytics/HouseholdWasteScanner';
+import HouseholdRunway from '../components/analytics/HouseholdRunway';
 
 const COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
 
@@ -55,12 +58,64 @@ export default function Home() {
 
     if (!journals || !journalLines || !accounts) return <Typography p={2}>Loading...</Typography>;
 
-    // Filter valid journals for the selected year
-    const yearJournals = journals.filter(j => j.date && j.date.startsWith(String(selectedYear)) && !j.deletedAt);
+    // Filter valid business journals for the selected year
+    const yearJournals = journals.filter(j => j.date && j.date.startsWith(String(selectedYear)) && !j.deletedAt && !j.is_private);
     const yearJournalIds = new Set(yearJournals.map(j => j.id));
 
     // Get lines for those valid journals
     const yearLines = journalLines.filter(l => yearJournalIds.has(l.journal_id));
+
+    // Private journals calculations
+    const privateJournals = journals.filter(j => j.date && j.date.startsWith(String(selectedYear)) && !j.deletedAt && j.is_private);
+    const privateJournalIds = new Set(privateJournals.map(j => j.id));
+    const privateLines = journalLines.filter(l => privateJournalIds.has(l.journal_id));
+
+    let privateExpense = 0;
+    let privateIncome = 0;
+    const yearlyPrivateExpenses: Record<string, number> = {};
+    const yearlyPrivateIncomes: Record<string, number> = {};
+
+    privateLines.forEach(line => {
+        const acc = accounts.find(a => String(a.code || a.id) === String(line.account_id));
+        if (!acc) return;
+
+        if (acc.type === 'expense' && line.debit > 0) {
+            privateExpense += line.debit;
+            yearlyPrivateExpenses[acc.name] = (yearlyPrivateExpenses[acc.name] || 0) + line.debit;
+        } else if (acc.type === 'revenue' && line.credit > 0) {
+            privateIncome += line.credit;
+            yearlyPrivateIncomes[acc.name] = (yearlyPrivateIncomes[acc.name] || 0) + line.credit;
+        }
+    });
+
+    const privateExpenseData = Object.entries(yearlyPrivateExpenses)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 6);
+
+    if (Object.keys(yearlyPrivateExpenses).length > 6) {
+        const othersValue = Object.entries(yearlyPrivateExpenses)
+            .sort((a, b) => b[1] - a[1])
+            .slice(6)
+            .reduce((sum, [, val]) => sum + val, 0);
+        privateExpenseData.push({ name: 'その他', value: othersValue });
+    }
+
+    const privateMonthlyData = Array.from({ length: 12 }, (_, i) => ({
+        month: `${i + 1}月`,
+        expense: 0
+    }));
+
+    privateLines.forEach(line => {
+        const j = journals.find(j => j.id === line.journal_id);
+        const acc = accounts.find(a => String(a.code || a.id) === String(line.account_id));
+        if (!j || !j.date || !acc || acc.type !== 'expense' || line.debit <= 0) return;
+
+        const monthNum = parseInt(j.date.substring(5, 7), 10);
+        if (isNaN(monthNum) || monthNum < 1 || monthNum > 12) return;
+
+        privateMonthlyData[monthNum - 1].expense += line.debit;
+    });
 
     let income = 0;
     let expense = 0;
@@ -125,7 +180,7 @@ export default function Home() {
     });
 
     // 前年データ集計 (YoY)
-    const lastYearJournals = journals.filter(j => j.date && j.date.startsWith(String(selectedYear - 1)) && !j.deletedAt);
+    const lastYearJournals = journals.filter(j => j.date && j.date.startsWith(String(selectedYear - 1)) && !j.deletedAt && !j.is_private);
     const lastYearJournalIds = new Set(lastYearJournals.map(j => j.id));
     const lastYearLines = journalLines.filter(l => lastYearJournalIds.has(l.journal_id));
 
@@ -239,6 +294,7 @@ export default function Home() {
                     <Tabs value={mainTabIndex} onChange={(_, v) => setMainTabIndex(v)} variant="scrollable" scrollButtons="auto" textColor="primary" indicatorColor="primary">
                         <Tab label="1. 経営サマリー (Basic)" sx={{ fontWeight: 'bold' }} />
                         <Tab label="2. 高度な分析 (Insights)" sx={{ fontWeight: 'bold' }} />
+                        <Tab label="3. 家計簿・プライベート" sx={{ fontWeight: 'bold', color: mainTabIndex === 2 ? '#0284c7' : 'text.secondary' }} />
                     </Tabs>
                 </Box>
 
@@ -405,6 +461,109 @@ export default function Home() {
                         <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: 'repeat(2, 1fr)' }} gap={4}>
                             <SubscriptionScanner transactions={yearLines} />
                             <AnomalyDetector monthlyData={monthlyData} yearlyExpenses={yearlyExpenses} />
+                        </Box>
+                    </Box>
+                )}
+
+                {mainTabIndex === 2 && (
+                    <Box pt={2}>
+                        <Box display="grid" gridTemplateColumns={{ xs: '1fr', sm: 'repeat(3, 1fr)' }} gap={2} mb={4}>
+                            <Card elevation={0} sx={{ bgcolor: '#f0fdf4', color: '#166534', borderRadius: 2, p: 0.5, border: '1px solid #bbf7d0' }}>
+                                <CardContent sx={{ pb: '16px !important' }}>
+                                    <Box display="flex" alignItems="center" gap={1} mb={2}>
+                                        <TrendingUpIcon fontSize="small" sx={{ opacity: 0.9 }} />
+                                        <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 600 }}>プライベート収入</Typography>
+                                    </Box>
+                                    <Typography variant="h4" sx={{ fontWeight: '800', fontFamily: 'monospace', letterSpacing: -1, fontSize: { xs: '1.75rem', sm: '2.125rem' } }}>
+                                        ¥{privateIncome.toLocaleString()}
+                                    </Typography>
+                                </CardContent>
+                            </Card>
+
+                            <Card elevation={0} sx={{ bgcolor: '#fffbeb', color: '#b45309', borderRadius: 2, p: 0.5, border: '1px solid #fde68a' }}>
+                                <CardContent sx={{ pb: '16px !important' }}>
+                                    <Box display="flex" alignItems="center" gap={1} mb={2}>
+                                        <TrendingDownIcon fontSize="small" sx={{ opacity: 0.9 }} />
+                                        <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 600 }}>プライベート支出</Typography>
+                                    </Box>
+                                    <Typography variant="h4" sx={{ fontWeight: '800', fontFamily: 'monospace', letterSpacing: -1, fontSize: { xs: '1.75rem', sm: '2.125rem' } }}>
+                                        ¥{privateExpense.toLocaleString()}
+                                    </Typography>
+                                </CardContent>
+                            </Card>
+
+                            <Card elevation={0} sx={{ bgcolor: '#e0f2fe', color: '#0369a1', borderRadius: 2, p: 0.5, border: '1px solid #bae6fd' }}>
+                                <CardContent sx={{ pb: '16px !important' }}>
+                                    <Box display="flex" alignItems="center" gap={1} mb={2}>
+                                        <AccountBalanceWalletIcon fontSize="small" sx={{ opacity: 0.9 }} />
+                                        <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 600 }}>純差額（家計の利益）</Typography>
+                                    </Box>
+                                    <Typography variant="h4" sx={{ fontWeight: '800', fontFamily: 'monospace', letterSpacing: -1, fontSize: { xs: '1.75rem', sm: '2.125rem' } }}>
+                                        ¥{(privateIncome - privateExpense).toLocaleString()}
+                                    </Typography>
+                                </CardContent>
+                            </Card>
+                        </Box>
+
+                        <Box mb={4}>
+                            <HouseholdSummary privateLines={privateLines} accounts={accounts} />
+                        </Box>
+
+                        <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr' }} gap={3} mb={4}>
+                            <HouseholdRunway 
+                                businessIncome={income} 
+                                businessExpense={expense} 
+                                privateIncome={privateIncome}
+                                privateExpense={privateExpense} 
+                                activeMonths={activeMonths}
+                            />
+                            
+                            <Box pb={0}>
+                                <Typography variant="subtitle1" fontWeight="bold" gutterBottom color="text.secondary">支出アラート</Typography>
+                                <HouseholdWasteScanner privateLines={privateLines} accounts={accounts} journals={privateJournals} />
+                            </Box>
+                        </Box>
+
+                        <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr' }} gap={2}>
+                            <Paper elevation={0} sx={{ borderRadius: 2, border: '1px solid #e2e8f0', p: 3 }}>
+                                <Typography variant="subtitle1" fontWeight="bold" gutterBottom>支出内訳</Typography>
+                                {privateExpenseData.length > 0 ? (
+                                    <Box height={260} width="100%">
+                                        {isMounted && (
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <PieChart>
+                                                    <Pie data={privateExpenseData} cx="50%" cy="45%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" stroke="none">
+                                                        {privateExpenseData.map((_entry, index) => (
+                                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                        ))}
+                                                    </Pie>
+                                                    <RechartsTooltip formatter={(value: any) => `¥${Number(value).toLocaleString()}`} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                                                    <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                        )}
+                                    </Box>
+                                ) : (
+                                    <Box display="flex" justifyContent="center" alignItems="center" height={260}><Typography color="text.secondary">データがありません</Typography></Box>
+                                )}
+                            </Paper>
+
+                            <Paper elevation={0} sx={{ borderRadius: 2, border: '1px solid #e2e8f0', p: 3 }}>
+                                <Typography variant="subtitle1" fontWeight="bold" gutterBottom>月別推移</Typography>
+                                <Box height={260} width="100%">
+                                    {isMounted && (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <ComposedChart data={privateMonthlyData} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                                <XAxis dataKey="month" fontSize={11} axisLine={false} tickLine={false} />
+                                                <YAxis yAxisId="left" fontSize={11} axisLine={false} tickLine={false} tickFormatter={(v) => `¥${v.toLocaleString()}`} />
+                                                <RechartsTooltip formatter={(value: any) => [`¥${Number(value).toLocaleString()}`, '支出']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                                                <Bar yAxisId="left" dataKey="expense" fill="#0ea5e9" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                                            </ComposedChart>
+                                        </ResponsiveContainer>
+                                    )}
+                                </Box>
+                            </Paper>
                         </Box>
                     </Box>
                 )}

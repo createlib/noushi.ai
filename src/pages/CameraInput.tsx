@@ -409,6 +409,7 @@ export default function CameraInput() {
                                 <Box key={`deb-${i}`} display="flex" gap={1} alignItems="center" mb={1.5}>
                                     <AccountAutocomplete
                                         accounts={accounts}
+                                        filterPrivate={editingIsPrivate}
                                         value={d.code}
                                         onChange={(newCode: number) => updateLine('debits', i, 'code', newCode)}
                                     />
@@ -434,6 +435,7 @@ export default function CameraInput() {
                                 <Box key={`cre-${i}`} display="flex" gap={1} alignItems="center" mb={1.5}>
                                     <AccountAutocomplete
                                         accounts={accounts}
+                                        filterPrivate={editingIsPrivate}
                                         value={c.code}
                                         onChange={(newCode: number) => updateLine('credits', i, 'code', newCode)}
                                     />

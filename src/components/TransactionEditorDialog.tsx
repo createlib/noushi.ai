@@ -206,6 +206,7 @@ export default function TransactionEditorDialog({ open, onClose, journalToEdit }
                     <Box key={`deb-${i}`} display="flex" gap={1} alignItems="center" mb={1.5}>
                         <AccountAutocomplete
                             accounts={accounts}
+                            filterPrivate={isPrivate}
                             value={d.code}
                             onChange={(newCode) => updateLine('debits', i, 'code', newCode)}
                             disabled={isLoadingLines}
@@ -235,6 +236,7 @@ export default function TransactionEditorDialog({ open, onClose, journalToEdit }
                     <Box key={`cre-${i}`} display="flex" gap={1} alignItems="center" mb={1.5}>
                         <AccountAutocomplete
                             accounts={accounts}
+                            filterPrivate={isPrivate}
                             value={c.code}
                             onChange={(newCode) => updateLine('credits', i, 'code', newCode)}
                             disabled={isLoadingLines}
