@@ -5,8 +5,11 @@ import HomeIcon from '@mui/icons-material/Home';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import SettingsIcon from '@mui/icons-material/Settings';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import { IconButton } from '@mui/material';
 
 import { initDb } from './db/init';
+import GlobalHelpDrawer from './components/GlobalHelpDrawer';
 
 import Home from './pages/Home';
 import Ledger from './pages/Ledger';
@@ -159,6 +162,7 @@ const theme = createTheme({
 function App() {
   const [navValue, setNavValue] = useState(0);
   const [initialized, setInitialized] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
 
   useEffect(() => {
     initDb().then(() => {
@@ -191,9 +195,21 @@ function App() {
                       <Box display="flex" alignItems="center" gap={2}>
                         <GlobalSyncIndicator />
                         <YearSelector />
+                        <IconButton 
+                          onClick={() => setIsHelpOpen(true)} 
+                          sx={{ 
+                            color: 'primary.main', 
+                            bgcolor: 'rgba(67, 56, 202, 0.05)', 
+                            '&:hover': { bgcolor: 'rgba(67, 56, 202, 0.1)' } 
+                          }}
+                        >
+                          <HelpOutlineIcon />
+                        </IconButton>
                       </Box>
                     </Toolbar>
                   </AppBar>
+
+                  <GlobalHelpDrawer open={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
 
                   <Routes>
                     <Route path="/login" element={<Login />} />
