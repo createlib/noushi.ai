@@ -52,6 +52,7 @@ export interface Settings {
     id?: number;
     geminiApiKey: string;
     aiModel?: string;
+    aiCustomRules?: string;
     useFirebaseSync?: boolean;
     businessName?: string;
     businessType?: {

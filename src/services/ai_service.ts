@@ -56,7 +56,7 @@ export async function analyzeReceipt(base64Image: string, mimeType: string): Pro
     const prompt = `
 あなたはプロの税理士です。提供されたレシートから以下の情報を抽出し、必ず指定したJSONフォーマットで返答してください。
 他の文章は一切含めず、JSONのみを返してください。
-
+${settings.aiCustomRules ? `\nユーザーからの重要な追加設定（カスタムルール）に従ってください:\n${settings.aiCustomRules}\n` : ''}
 以下の勘定科目マスターのリストを参照し、複数行を含む可能性がある「借方(debits)」と「貸方(credits)」のリストを作成してください。
 
 重要な指示（特に農業や不動産などの事業者の場合）:
@@ -123,7 +123,7 @@ export async function analyzeCSVRow(csvRow: string): Promise<AIResult | null> {
     const prompt = `
 あなたはプロの税理士です。銀行の入出金明細やクレジットカードの利用明細のCSVの1行がテキストとして渡されます。
 以下の勘定科目マスターを参照し、自動で仕訳を推論してJSONで返してください。
-
+${settings?.aiCustomRules ? `\nユーザーからの重要な追加設定（カスタムルール）に従ってください:\n${settings.aiCustomRules}\n` : ''}
 もしこの取引が事業に無関係な個人的な支出（プライベートな買い物や生活費など）である可能性が高い場合は、"isPersonalUse": true に設定してください。事業に関連しそうな場合は false または除外してください。
 
 重要な指示:

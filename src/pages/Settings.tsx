@@ -24,6 +24,7 @@ export default function Settings() {
     // AI Settings
     const [apiKey, setApiKey] = useState('');
     const [aiModel, setAiModel] = useState('gemini-2.5-flash');
+    const [aiCustomRules, setAiCustomRules] = useState('');
 
     // Sync Settings
     const [useFirebaseSync, setUseFirebaseSync] = useState(false);
@@ -88,6 +89,7 @@ export default function Settings() {
         if (currentSettings) {
             setApiKey(currentSettings.geminiApiKey || '');
             if (currentSettings.aiModel) setAiModel(currentSettings.aiModel);
+            if (currentSettings.aiCustomRules) setAiCustomRules(currentSettings.aiCustomRules);
             if (currentSettings.useFirebaseSync !== undefined) setUseFirebaseSync(currentSettings.useFirebaseSync);
             if (currentSettings.businessName) setBusinessName(currentSettings.businessName);
             if (currentSettings.businessType) {
@@ -119,6 +121,7 @@ export default function Settings() {
             const newSettings = {
                 geminiApiKey: apiKey,
                 aiModel,
+                aiCustomRules,
                 useFirebaseSync,
                 businessName,
                 businessType,
@@ -274,6 +277,19 @@ export default function Settings() {
                         <MenuItem value="gemini-1.5-flash">gemini-1.5-flash</MenuItem>
                         <MenuItem value="gemini-1.0-pro-vision-latest">gemini-1.0-pro-vision-latest</MenuItem>
                     </TextField>
+
+                    <TextField
+                        label="AIへの追加指示（カスタムルール）"
+                        variant="outlined"
+                        fullWidth
+                        margin="normal"
+                        multiline
+                        minRows={3}
+                        value={aiCustomRules}
+                        onChange={(e) => setAiCustomRules(e.target.value)}
+                        placeholder="例: ガソリン代のレシートは必ず摘要にインボイス登録番号を記載してください。コンビニのレシートは『消耗品費』にしてください。"
+                        helperText="レシートやCSV読込時にAIへ守らせたい独自のルールを自由に設定できます。"
+                    />
 
                     <Box mt={3}>
                         <Button variant="contained" color="primary" onClick={handleSave} disableElevation>
