@@ -11,6 +11,7 @@ import { auth } from '../firebase';
 import { useAnalysis, type CameraQueueItem } from '../contexts/AnalysisContext';
 import { AccountAutocomplete } from '../components/AccountAutocomplete';
 import { checkIsYearClosed } from '../services/closing_service';
+import { getToggledAccountId } from '../utils/accountMapping';
 
 
 export default function CameraInput() {
@@ -394,7 +395,15 @@ export default function CameraInput() {
                                     onChange={(e) => setEditingResult({ ...editingResult, date: e.target.value })}
                                 />
                                 <FormControlLabel
-                                    control={<Switch color="secondary" checked={editingIsPrivate} onChange={(e) => setEditingIsPrivate(e.target.checked)} />}
+                                    control={<Switch color="secondary" checked={editingIsPrivate} onChange={(e) => {
+                                        const newIsPrivate = e.target.checked;
+                                        setEditingIsPrivate(newIsPrivate);
+                                        setEditingResult((prev: any) => ({
+                                            ...prev,
+                                            debits: prev.debits.map((d: any) => ({ ...d, code: getToggledAccountId(d.code, newIsPrivate, accounts) as number })),
+                                            credits: prev.credits.map((c: any) => ({ ...c, code: getToggledAccountId(c.code, newIsPrivate, accounts) as number }))
+                                        }));
+                                    }} />}
                                     label={<Typography variant="body2" fontWeight="bold" color={editingIsPrivate ? "secondary.dark" : "text.secondary"}>プライベートな支出等（帳簿除外）</Typography>}
                                     sx={{ m: 0 }}
                                 />

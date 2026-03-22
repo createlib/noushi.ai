@@ -1526,6 +1526,27 @@
     "tax_type": "non_taxable"
   },
   {
+    "id": 9805,
+    "code": 9805,
+    "name": "PayPay・○○ペイ（家計）",
+    "type": "asset",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9806,
+    "code": 9806,
+    "name": "交通系IC（家計）",
+    "type": "asset",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9807,
+    "code": 9807,
+    "name": "暗号資産/クリプト（家計）",
+    "type": "asset",
+    "tax_type": "non_taxable"
+  },
+  {
     "id": 9890,
     "code": 9890,
     "name": "元入金（家計）",
@@ -1676,6 +1697,13 @@
     "id": 9921,
     "code": 9921,
     "name": "予備費",
+    "type": "expense",
+    "tax_type": "non_taxable"
+  },
+  {
+    "id": 9922,
+    "code": 9922,
+    "name": "お菓子",
     "type": "expense",
     "tax_type": "non_taxable"
   },

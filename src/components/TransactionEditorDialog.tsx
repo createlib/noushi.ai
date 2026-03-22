@@ -7,6 +7,7 @@ import { db, type Journal } from '../db/db';
 import { AccountAutocomplete } from './AccountAutocomplete';
 import { auth } from '../firebase';
 import { checkIsYearClosed } from '../services/closing_service';
+import { getToggledAccountId } from '../utils/accountMapping';
 // import { forceUploadSync } removed to avoid unused variable warning
 
 interface Props {
@@ -191,7 +192,12 @@ export default function TransactionEditorDialog({ open, onClose, journalToEdit }
                         sx={{ width: { xs: '100%', sm: 'auto' }, flex: { sm: 1 } }}
                     />
                     <FormControlLabel
-                        control={<Switch color="secondary" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} disabled={isLoadingLines} />}
+                        control={<Switch color="secondary" checked={isPrivate} onChange={(e) => {
+                            const newIsPrivate = e.target.checked;
+                            setIsPrivate(newIsPrivate);
+                            setDebits(prev => prev.map(d => ({ ...d, code: getToggledAccountId(d.code, newIsPrivate, accounts) as number })));
+                            setCredits(prev => prev.map(c => ({ ...c, code: getToggledAccountId(c.code, newIsPrivate, accounts) as number })));
+                        }} disabled={isLoadingLines} />}
                         label={<Typography variant="body2" fontWeight="bold" color={isPrivate ? "secondary.dark" : "text.secondary"}>プライベートな支出等（帳簿除外）</Typography>}
                         sx={{ m: 0 }}
                     />

@@ -11,13 +11,14 @@ interface HouseholdSummaryProps {
 }
 
 export default function HouseholdSummary({ privateLines, accounts }: HouseholdSummaryProps) {
-    const { totalExpense, fixedExpense, variableExpense, foodExpense } = useMemo(() => {
+    const { totalExpense, fixedExpense, pocketMoneyExpense, foodExpense } = useMemo(() => {
         let total = 0;
         let fixed = 0;
-        let variable = 0;
+        let pocketMoney = 0;
         let food = 0;
 
         const fixedAccountNames = ['家賃', '電気代', 'ガス代', '水道代', '通信費', '保険料', '車費', '教育・自己投資', 'サブスク'];
+        const pocketMoneyAccountNames = ['交際費', '娯楽費', '被服費', '美容費', '特別支出'];
         
         privateLines.forEach(line => {
             const acc = accounts.find(a => String(a.code || a.id) === String(line.account_id));
@@ -31,12 +32,14 @@ export default function HouseholdSummary({ privateLines, accounts }: HouseholdSu
 
             if (fixedAccountNames.includes(acc.name)) {
                 fixed += line.debit;
-            } else {
-                variable += line.debit;
+            }
+            
+            if (pocketMoneyAccountNames.includes(acc.name)) {
+                pocketMoney += line.debit;
             }
         });
 
-        return { totalExpense: total, fixedExpense: fixed, variableExpense: variable, foodExpense: food };
+        return { totalExpense: total, fixedExpense: fixed, pocketMoneyExpense: pocketMoney, foodExpense: food };
     }, [privateLines, accounts]);
 
     if (totalExpense === 0) {
@@ -93,20 +96,20 @@ export default function HouseholdSummary({ privateLines, accounts }: HouseholdSu
                 </Typography>
             </Box>
 
-            {/* 変動費コントロール */}
+            {/* ゆとり費コントロール */}
             <Box p={3} borderRadius={2} bgcolor="#fdf4ff" border="1px solid #fbcfe8" height="100%">
                 <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
                     <Box display="flex" alignItems="center" gap={1}>
                         <AccountBalanceWalletIcon sx={{ color: '#be185d', fontSize: 20 }} />
-                        <Typography variant="caption" color="#be185d" fontWeight="bold">変動費（お小遣い・娯楽）</Typography>
+                        <Typography variant="caption" color="#be185d" fontWeight="bold">ゆとり費（お小遣い・娯楽）</Typography>
                     </Box>
                 </Box>
                 <Typography variant="h4" fontWeight="800" color="#9d174d" mt={1}>
-                    ¥{variableExpense.toLocaleString()}
+                    ¥{pocketMoneyExpense.toLocaleString()}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" mt={2} fontSize="0.75rem">
-                    交際費や娯楽費など、月によってコントロール可能な出費の累計です。
-                    全体の {((variableExpense / totalExpense) * 100).toFixed(1)}% を占めています。
+                    交際費や娯楽費など、生活に必須ではない「ゆとり費」の累計です。
+                    全体の {((pocketMoneyExpense / totalExpense) * 100).toFixed(1)}% を占めています。
                 </Typography>
             </Box>
         </Box>
