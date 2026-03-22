@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Box, Typography, Paper, Tooltip, IconButton } from '@mui/material';
+import { useMemo } from 'react';
+import { Box, Typography, Tooltip, IconButton } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import HomeIcon from '@mui/icons-material/Home';

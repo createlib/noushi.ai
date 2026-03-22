@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Box, Typography, LinearProgress, Tooltip, IconButton } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import SavingsIcon from '@mui/icons-material/Savings';

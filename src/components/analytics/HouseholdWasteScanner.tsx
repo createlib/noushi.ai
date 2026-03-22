@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Box, Typography, Paper, Alert, AlertTitle } from '@mui/material';
+import { useMemo } from 'react';
+import { Box, Typography, Alert, AlertTitle } from '@mui/material';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
 interface HouseholdWasteScannerProps {
@@ -12,7 +12,6 @@ export default function HouseholdWasteScanner({ privateLines, journals, accounts
     const warnings = useMemo(() => {
         // 対象とする無駄遣いになりやすい変動費（浪費・ゆとり費）
         const targetAccounts = ['交際費', '娯楽費', '被服費', '美容費', '特別支出', 'サブスク'];
-        const currentMonth = new Date().getMonth() + 1; // 1-12
         
         // アカウントごとの月別集計: { '交際費': { '1': 10000, '2': 50000, ... } }
         const monthlyCatMap: Record<string, Record<string, number>> = {};
