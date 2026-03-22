@@ -385,17 +385,18 @@ export default function CameraInput() {
                                 <IconButton onClick={closeReview}><Close /></IconButton>
                             </Box>
 
-                            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                            <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} gap={2} mb={3}>
                                 <TextField
                                     margin="dense" label="日付" type="date"
                                     InputLabelProps={{ shrink: true }}
                                     value={editingResult.date}
-                                    sx={{ flex: 1, mr: 2 }}
+                                    sx={{ width: { xs: '100%', sm: 'auto' }, flex: { sm: 1 } }}
                                     onChange={(e) => setEditingResult({ ...editingResult, date: e.target.value })}
                                 />
                                 <FormControlLabel
                                     control={<Switch color="secondary" checked={editingIsPrivate} onChange={(e) => setEditingIsPrivate(e.target.checked)} />}
                                     label={<Typography variant="body2" fontWeight="bold" color={editingIsPrivate ? "secondary.dark" : "text.secondary"}>プライベートな支出等（帳簿除外）</Typography>}
+                                    sx={{ m: 0 }}
                                 />
                             </Box>
 

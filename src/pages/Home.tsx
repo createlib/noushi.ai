@@ -291,7 +291,7 @@ export default function Home() {
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>ビジネスアナリティクス</Typography>
 
                 <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-                    <Tabs value={mainTabIndex} onChange={(_, v) => setMainTabIndex(v)} variant="scrollable" scrollButtons="auto" textColor="primary" indicatorColor="primary">
+                    <Tabs value={mainTabIndex} onChange={(_, v) => setMainTabIndex(v)} variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile textColor="primary" indicatorColor="primary">
                         <Tab label="1. 経営サマリー (Basic)" sx={{ fontWeight: 'bold' }} />
                         <Tab label="2. 高度な分析 (Insights)" sx={{ fontWeight: 'bold' }} />
                         <Tab label="3. 家計簿・プライベート" sx={{ fontWeight: 'bold', color: mainTabIndex === 2 ? '#0284c7' : 'text.secondary' }} />

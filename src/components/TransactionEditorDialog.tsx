@@ -181,18 +181,19 @@ export default function TransactionEditorDialog({ open, onClose, journalToEdit }
             <DialogTitle>{journalToEdit ? '仕訳の編集' : '手動で仕訳を追加'}</DialogTitle>
             <DialogContent dividers>
                 {errorMsg && <Alert severity="error" sx={{ mb: 2 }}>{errorMsg}</Alert>}
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} gap={2} mb={3}>
                     <TextField
                         margin="dense" label="日付" type="date"
                         InputLabelProps={{ shrink: true }}
                         value={date}
                         onChange={(e) => setDate(e.target.value)}
                         disabled={isLoadingLines}
-                        sx={{ flex: 1, mr: 2 }}
+                        sx={{ width: { xs: '100%', sm: 'auto' }, flex: { sm: 1 } }}
                     />
                     <FormControlLabel
                         control={<Switch color="secondary" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} disabled={isLoadingLines} />}
                         label={<Typography variant="body2" fontWeight="bold" color={isPrivate ? "secondary.dark" : "text.secondary"}>プライベートな支出等（帳簿除外）</Typography>}
+                        sx={{ m: 0 }}
                     />
                 </Box>
 
