@@ -33,7 +33,7 @@ export const AccountAutocomplete: React.FC<AccountAutocompleteProps> = ({
             const codeNum = typeof a.code === 'number' ? a.code : parseInt(a.code as any, 10);
             if (isNaN(codeNum)) return true; // コードがない場合はとりあえず残す
             if (filterPrivate) {
-                return (codeNum >= 9800 && codeNum <= 9989) || codeNum === 100 || codeNum === 111;
+                return (codeNum >= 9800 && codeNum <= 9989);
             } else {
                 return codeNum < 9800 || codeNum > 9989;
             }

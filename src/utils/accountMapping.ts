@@ -2,6 +2,10 @@
 
 // Define mappings between business and private account names
 const businessToPrivateMap: Record<string, string> = {
+    "現金": "現金（家計）",
+    "普通預金": "普通預金（家計）",
+    "未払金": "クレジットカード（家計）",
+    "借入金": "その他の借入・ローン（家計）",
     "消耗品費": "日用品費",
     "事務用品費": "日用品費",
     "接待交際費": "交際費",
@@ -15,6 +19,10 @@ const businessToPrivateMap: Record<string, string> = {
 };
 
 const privateToBusinessMap: Record<string, string> = {
+    "現金（家計）": "現金",
+    "普通預金（家計）": "普通預金",
+    "クレジットカード（家計）": "未払金",
+    "その他の借入・ローン（家計）": "借入金",
     "日用品費": "消耗品費",
     "交際費": "接待交際費",
     "交通費": "旅費交通費",
@@ -37,13 +45,6 @@ export function getToggledAccountId(
 
     const currentAcc = accounts.find(a => String(a.code || a.id) === String(currentAccountId));
     if (!currentAcc) return currentAccountId;
-
-    // If it's a cash/bank account, those names are shared or identical (100, 111)
-    // Actually, cash/bank shouldn't be mapped because they are valid in both modes now.
-    // However, if we want to map "現金" (100) -> "現金（家計）" (9801) it could be helpful, but the user explicitly requested 100/111 to remain available in private mode. So we leave them.
-    if (currentAcc.code === 100 || currentAcc.code === 111) {
-        return currentAccountId;
-    }
 
     const mapToUse = isTurningPrivate ? businessToPrivateMap : privateToBusinessMap;
     const targetName = mapToUse[currentAcc.name];
