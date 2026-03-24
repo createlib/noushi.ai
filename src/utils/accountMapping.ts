@@ -15,7 +15,10 @@ const businessToPrivateMap: Record<string, string> = {
     "地代家賃": "家賃",
     "水道光熱費": "電気代", // defaults to electricity
     "租税公課": "税金",
-    "雑費": "特別支出"
+    "雑費": "特別支出",
+    "仮払消費税等": "消費税（家計）",
+    "未払消費税等": "消費税（家計）",
+    "仮受消費税等": "消費税（家計）"
 };
 
 const privateToBusinessMap: Record<string, string> = {
@@ -33,7 +36,8 @@ const privateToBusinessMap: Record<string, string> = {
     "ガス代": "水道光熱費",
     "水道代": "水道光熱費",
     "税金": "租税公課",
-    "特別支出": "雑費"
+    "特別支出": "雑費",
+    "消費税（家計）": "仮払消費税等"
 };
 
 export function getToggledAccountId(

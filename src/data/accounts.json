@@ -1708,6 +1708,13 @@
     "tax_type": "non_taxable"
   },
   {
+    "id": 9923,
+    "code": 9923,
+    "name": "消費税（家計）",
+    "type": "expense",
+    "tax_type": "non_taxable"
+  },
+  {
     "id": 9999,
     "code": 9999,
     "name": "不明",
