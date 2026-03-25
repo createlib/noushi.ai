@@ -17,8 +17,8 @@ export const GlPdfExporter: React.FC<{ accounts: any[], transactions: any[], sel
     // Filter accounts that have transactions
     const activeAccounts = accounts.filter(account => {
         return transactions.some(t =>
-            (t.debits || []).some((d: any) => d.code === account.code) ||
-            (t.credits || []).some((c: any) => c.code === account.code)
+            (t.debits || []).some((d: any) => String(d.code) === String(account.code)) ||
+            (t.credits || []).some((c: any) => String(c.code) === String(account.code))
         );
     }).sort((a, b) => a.code - b.code);
 
@@ -28,8 +28,8 @@ export const GlPdfExporter: React.FC<{ accounts: any[], transactions: any[], sel
 
     activeAccounts.forEach(account => {
         const relatedTransactions = transactions.filter(t =>
-            (t.debits || []).some((d: any) => d.code === account.code) ||
-            (t.credits || []).some((c: any) => c.code === account.code)
+            (t.debits || []).some((d: any) => String(d.code) === String(account.code)) ||
+            (t.credits || []).some((c: any) => String(c.code) === String(account.code))
         );
 
         const kishuRaw = balancesKishu[account.code] || 0;
@@ -38,8 +38,8 @@ export const GlPdfExporter: React.FC<{ accounts: any[], transactions: any[], sel
         let currentBalance = accountKishu;
 
         const rows = relatedTransactions.map((t, index) => {
-            const isDebit = (t.debits || []).find((d: any) => d.code === account.code);
-            const isCredit = (t.credits || []).find((c: any) => c.code === account.code);
+            const isDebit = (t.debits || []).find((d: any) => String(d.code) === String(account.code));
+            const isCredit = (t.credits || []).find((c: any) => String(c.code) === String(account.code));
 
             const debitAmount = isDebit ? isDebit.amount : 0;
             const creditAmount = isCredit ? isCredit.amount : 0;
@@ -51,10 +51,10 @@ export const GlPdfExporter: React.FC<{ accounts: any[], transactions: any[], sel
             let oppCode = '999';
             if (isDebit && (t.credits || []).length === 1) {
                 oppCode = String(t.credits[0].code);
-                oppName = accounts.find(a => a.code === t.credits[0].code)?.name || '不明';
+                oppName = accounts.find(a => String(a.code) === String(t.credits[0].code))?.name || '不明';
             } else if (isCredit && (t.debits || []).length === 1) {
                 oppCode = String(t.debits[0].code);
-                oppName = accounts.find(a => a.code === t.debits[0].code)?.name || '不明';
+                oppName = accounts.find(a => String(a.code) === String(t.debits[0].code))?.name || '不明';
             }
 
             return {

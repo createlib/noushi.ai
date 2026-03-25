@@ -360,8 +360,8 @@ export default function Report() {
             sortedAccounts.forEach(account => {
                 // この科目が関わるトランザクションを抽出
                 const relatedTransactions = transactions.filter(t =>
-                    (t.debits || []).some(d => d.code === account.code) ||
-                    (t.credits || []).some(c => c.code === account.code)
+                    (t.debits || []).some(d => String(d.code) === String(account.code)) ||
+                    (t.credits || []).some(c => String(c.code) === String(account.code))
                 );
 
                 if (relatedTransactions.length === 0) return; // 取引なしはスキップ
@@ -378,8 +378,8 @@ export default function Report() {
                 let currentBalance = accountKishu;
 
                 relatedTransactions.forEach((t, index) => {
-                    const isDebit = (t.debits || []).find(d => d.code === account.code);
-                    const isCredit = (t.credits || []).find(c => c.code === account.code);
+                    const isDebit = (t.debits || []).find(d => String(d.code) === String(account.code));
+                    const isCredit = (t.credits || []).find(c => String(c.code) === String(account.code));
 
                     let debitAmount = isDebit ? isDebit.amount : '';
                     let creditAmount = isCredit ? isCredit.amount : '';
@@ -392,10 +392,10 @@ export default function Report() {
                     let oppCode = '999';
                     if (isDebit && (t.credits || []).length === 1) {
                         oppCode = String(t.credits[0].code);
-                        oppName = accounts.find(a => a.code === t.credits[0].code)?.name || '不明';
+                        oppName = accounts.find(a => String(a.code) === String(t.credits[0].code))?.name || '不明';
                     } else if (isCredit && (t.debits || []).length === 1) {
                         oppCode = String(t.debits[0].code);
-                        oppName = accounts.find(a => a.code === t.debits[0].code)?.name || '不明';
+                        oppName = accounts.find(a => String(a.code) === String(t.debits[0].code))?.name || '不明';
                     }
 
                     wsData.push([
