@@ -24,7 +24,6 @@ export const GlPdfExporter: React.FC<{ accounts: any[], transactions: any[], sel
 
     // Build pages
     const pages: any[] = [];
-    const maxRowsPerPage = 18; // Reduced to fit landscape A4 safely with bottom margins
 
     activeAccounts.forEach(account => {
         const relatedTransactions = transactions.filter(t =>
@@ -112,15 +111,38 @@ export const GlPdfExporter: React.FC<{ accounts: any[], transactions: any[], sel
             ...rows
         ];
 
-        // Chunk into pages
-        for (let i = 0; i < allRows.length; i += maxRowsPerPage) {
-            pages.push({
-                account,
-                pageIdx: Math.floor(i / maxRowsPerPage) + 1,
-                totalPages: Math.ceil(allRows.length / maxRowsPerPage),
-                rows: allRows.slice(i, i + maxRowsPerPage)
-            });
+        // Chunk into pages dynamically based on estimated height
+        let currentPageRows: any[] = [];
+        let currentHeight = 0;
+        const USABLE_HEIGHT = 520; // safe max pixels for landscape A4
+
+        const accountPages: any[] = [];
+
+        allRows.forEach(r => {
+            const descLines = r.desc ? Math.ceil(String(r.desc).length / 24) : 1;
+            const oppLines = r.oppName ? Math.ceil(String(r.oppName).length / 16) : 1;
+            const lines = Math.max(1, descLines, oppLines);
+            const rowHeight = 12 + 18 * lines; // 12px padding + 18px line-height
+
+            if (currentHeight + rowHeight > USABLE_HEIGHT && currentPageRows.length > 0) {
+                accountPages.push({ account, rows: currentPageRows });
+                currentPageRows = [];
+                currentHeight = 0;
+            }
+
+            currentPageRows.push(r);
+            currentHeight += rowHeight;
+        });
+
+        if (currentPageRows.length > 0) {
+            accountPages.push({ account, rows: currentPageRows });
         }
+
+        accountPages.forEach((p, idx) => {
+            p.pageIdx = idx + 1;
+            p.totalPages = accountPages.length;
+            pages.push(p);
+        });
     });
 
     const handleGeneratePdf = async () => {

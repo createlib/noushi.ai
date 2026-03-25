@@ -15,7 +15,6 @@ export const JournalPdfExporter: React.FC<{ transactions: any[], accounts: any[]
 
     // Build pages
     const pages: any[] = [];
-    const maxRowsPerPage = 14; // Fit portrait A4 without bottom crop
 
     // Prepare flat rows from transactions
     const rows: any[] = [];
@@ -48,14 +47,36 @@ export const JournalPdfExporter: React.FC<{ transactions: any[], accounts: any[]
         }
     });
 
-    // Chunk into pages
-    for (let i = 0; i < rows.length; i += maxRowsPerPage) {
-        pages.push({
-            pageIdx: Math.floor(i / maxRowsPerPage) + 1,
-            totalPages: Math.ceil(rows.length / maxRowsPerPage),
-            rows: rows.slice(i, i + maxRowsPerPage)
-        });
+    // Chunk into pages dynamically based on estimated height
+    const USABLE_HEIGHT = 800; // safe max pixels per page
+    let currentPageRows: any[] = [];
+    let currentHeight = 0;
+
+    rows.forEach(r => {
+        const descLines = r.desc ? Math.ceil(String(r.desc).length / 11) : 1;
+        const debLines = r.debName ? Math.ceil(String(r.debName).length / 7) : 1;
+        const creLines = r.creName ? Math.ceil(String(r.creName).length / 7) : 1;
+        const lines = Math.max(1, descLines, debLines, creLines);
+        const rowHeight = 16 + 20 * lines; // 16px padding + 20px line-height
+
+        if (currentHeight + rowHeight > USABLE_HEIGHT && currentPageRows.length > 0) {
+            pages.push({ rows: currentPageRows });
+            currentPageRows = [];
+            currentHeight = 0;
+        }
+
+        currentPageRows.push(r);
+        currentHeight += rowHeight;
+    });
+
+    if (currentPageRows.length > 0) {
+        pages.push({ rows: currentPageRows });
     }
+
+    pages.forEach((p, idx) => {
+        p.pageIdx = idx + 1;
+        p.totalPages = pages.length;
+    });
 
     const handleGeneratePdf = async () => {
         setIsGenerating(true);
