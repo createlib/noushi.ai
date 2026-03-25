@@ -137,7 +137,6 @@ export const GlPdfExporter: React.FC<{ accounts: any[], transactions: any[], sel
         try {
             const pdf = new jsPDF('l', 'mm', 'a4');
             const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
 
             for (let i = 0; i < pages.length; i++) {
                 const pageData = pages[i];
@@ -209,14 +208,9 @@ export const GlPdfExporter: React.FC<{ accounts: any[], transactions: any[], sel
                 if (i > 0) pdf.addPage();
 
                 const imgRatio = canvas.height / canvas.width;
-                const pdfRatio = pdfHeight / pdfWidth;
 
-                let finalW = pdfWidth;
-                let finalH = pdfWidth * imgRatio;
-                if (imgRatio > pdfRatio) {
-                    finalH = pdfHeight;
-                    finalW = pdfHeight / imgRatio;
-                }
+                const finalW = pdfWidth;
+                const finalH = pdfWidth * imgRatio;
 
                 pdf.addImage(imgData, 'JPEG', 0, 0, finalW, finalH);
 
