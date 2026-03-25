@@ -377,38 +377,70 @@ export default function Report() {
 
                 let currentBalance = accountKishu;
 
-                relatedTransactions.forEach((t, index) => {
-                    const isDebit = (t.debits || []).find(d => String(d.code) === String(account.code));
-                    const isCredit = (t.credits || []).find(c => String(c.code) === String(account.code));
-
-                    let debitAmount = isDebit ? isDebit.amount : '';
-                    let creditAmount = isCredit ? isCredit.amount : '';
-
-                    if (isDebit) currentBalance += (isDebitAccount(account) ? isDebit.amount : -isDebit.amount);
-                    if (isCredit) currentBalance += (isCreditAccount(account) ? isCredit.amount : -isCredit.amount);
-
-                    // 相手科目の特定 (複合仕訳の場合は "諸口" とするか、逆側の最初の科目とする)
-                    let oppName = '諸口';
-                    let oppCode = '999';
-                    if (isDebit && (t.credits || []).length === 1) {
-                        oppCode = String(t.credits[0].code);
-                        oppName = accounts.find(a => String(a.code) === String(t.credits[0].code))?.name || '不明';
-                    } else if (isCredit && (t.debits || []).length === 1) {
-                        oppCode = String(t.debits[0].code);
-                        oppName = accounts.find(a => String(a.code) === String(t.debits[0].code))?.name || '不明';
+                const transactionRows = relatedTransactions.flatMap((t, index) => {
+                    const debits = (t.debits || []).map((d: any) => ({ ...d }));
+                    const credits = (t.credits || []).map((c: any) => ({ ...c }));
+                    
+                    const pairs: any[] = [];
+                    let dIdx = 0;
+                    let cIdx = 0;
+                    
+                    while (dIdx < debits.length && cIdx < credits.length) {
+                        const d = debits[dIdx];
+                        const c = credits[cIdx];
+                        
+                        const matchAmount = Math.min(d.amount, c.amount);
+                        if (matchAmount > 0) pairs.push({ debitCode: d.code, creditCode: c.code, amount: matchAmount });
+                        
+                        d.amount -= matchAmount;
+                        c.amount -= matchAmount;
+                        
+                        if (Math.abs(d.amount) < 0.001) dIdx++;
+                        if (Math.abs(c.amount) < 0.001) cIdx++;
                     }
+                    
+                    while (dIdx < debits.length) {
+                        if (debits[dIdx].amount > 0.001) pairs.push({ debitCode: debits[dIdx].code, creditCode: 999, amount: debits[dIdx].amount });
+                        dIdx++;
+                    }
+                    while (cIdx < credits.length) {
+                        if (credits[cIdx].amount > 0.001) pairs.push({ debitCode: 999, creditCode: credits[cIdx].code, amount: credits[cIdx].amount });
+                        cIdx++;
+                    }
+                    
+                    const generatedRows: any[] = [];
+                    
+                    pairs.forEach(p => {
+                        const isDebit = String(p.debitCode) === String(account.code);
+                        const isCredit = String(p.creditCode) === String(account.code);
+                        
+                        if (isDebit && isCredit) {
+                            generatedRows.push({ date: t.date, no: index + 1, isDebit: true, isCredit: true, debitAmount: p.amount, creditAmount: p.amount, oppCode: String(account.code), oppName: '同一科目振替', desc: t.description || '' });
+                        } else if (isDebit) {
+                            generatedRows.push({ date: t.date, no: index + 1, isDebit: true, isCredit: false, debitAmount: p.amount, creditAmount: '', oppCode: String(p.creditCode), oppName: accounts.find(a => String(a.code) === String(p.creditCode))?.name || '不明', desc: t.description || '' });
+                        } else if (isCredit) {
+                            generatedRows.push({ date: t.date, no: index + 1, isDebit: false, isCredit: true, debitAmount: '', creditAmount: p.amount, oppCode: String(p.debitCode), oppName: accounts.find(a => String(a.code) === String(p.debitCode))?.name || '不明', desc: t.description || '' });
+                        }
+                    });
+                    
+                    return generatedRows;
+                });
+
+                transactionRows.forEach((r) => {
+                    if (r.isDebit) currentBalance += (isDebitAccount(account) ? Number(r.debitAmount) : -Number(r.debitAmount));
+                    if (r.isCredit) currentBalance += (isCreditAccount(account) ? Number(r.creditAmount) : -Number(r.creditAmount));
 
                     wsData.push([
-                        t.date,
-                        index + 1, // 仕訳No
-                        oppCode,
-                        oppName,
-                        debitAmount,
-                        creditAmount,
+                        r.date,
+                        r.no, // 仕訳No
+                        r.oppCode,
+                        r.oppName,
+                        r.debitAmount,
+                        r.creditAmount,
                         currentBalance
                     ]);
                     wsData.push([
-                        '', '', '', t.description || '', '', '', ''
+                        '', '', '', r.desc, '', '', ''
                     ]);
                 });
 
