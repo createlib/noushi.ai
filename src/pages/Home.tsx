@@ -1,4 +1,4 @@
-import { Box, Typography, Card, CardContent, Paper, Tooltip, IconButton, CircularProgress, Tabs, Tab } from '@mui/material';
+import { Box, Typography, Card, CardContent, Paper, Tooltip, IconButton, CircularProgress, Button, Chip } from '@mui/material';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend, ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
@@ -251,9 +251,9 @@ export default function Home() {
                 )}
             </Box>
 
-            <Box display="grid" gridTemplateColumns={{ xs: '1fr', sm: 'repeat(3, 1fr)' }} gap={2} sx={{ mb: 4, px: 1 }}>
-                <Box>
-                    <Card elevation={0} sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', borderRadius: 2, p: 0.5, boxShadow: '0 10px 15px -3px rgba(67, 56, 202, 0.3)' }}>
+            <Box display="grid" gridTemplateColumns={{ xs: '1fr 1fr', sm: 'repeat(3, 1fr)' }} gap={2} sx={{ mb: 4, px: 1 }}>
+                <Box sx={{ gridColumn: { xs: 'span 2', sm: 'span 1' } }}>
+                    <Card elevation={0} sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', borderRadius: 2, p: 0.5, boxShadow: '0 10px 15px -3px rgba(67, 56, 202, 0.3)', height: '100%' }}>
                         <CardContent sx={{ pb: '16px !important' }}>
                             <Box display="flex" alignItems="center" gap={1} mb={2}>
                                 <TrendingUpIcon fontSize="small" sx={{ opacity: 0.9 }} />
@@ -264,24 +264,24 @@ export default function Home() {
                     </Card>
                 </Box>
                 <Box>
-                    <Card elevation={0} sx={{ bgcolor: '#fffbeb', color: '#b45309', borderRadius: 2, p: 0.5, border: '1px solid #fde68a' }}>
+                    <Card elevation={0} sx={{ bgcolor: '#fffbeb', color: '#b45309', borderRadius: 2, p: 0.5, border: '1px solid #fde68a', height: '100%' }}>
                         <CardContent sx={{ pb: '16px !important' }}>
-                            <Box display="flex" alignItems="center" gap={1} mb={2}>
+                            <Box display="flex" alignItems="center" gap={1} mb={{ xs: 1, sm: 2 }}>
                                 <TrendingDownIcon fontSize="small" sx={{ opacity: 0.9 }} />
                                 <Typography variant="caption" sx={{ opacity: 0.9, fontWeight: 600 }}>年間支出</Typography>
                             </Box>
-                            <Typography variant="h5" sx={{ fontWeight: 'bold', fontFamily: 'monospace', letterSpacing: -1 }}>¥{expense.toLocaleString()}</Typography>
+                            <Typography variant="h5" sx={{ fontWeight: 'bold', fontFamily: 'monospace', letterSpacing: -1, fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>¥{expense.toLocaleString()}</Typography>
                         </CardContent>
                     </Card>
                 </Box>
                 <Box>
-                    <Card elevation={0} sx={{ bgcolor: '#f0fdf4', color: '#166534', borderRadius: 2, p: 0.5, border: '1px solid #bbf7d0' }}>
+                    <Card elevation={0} sx={{ bgcolor: '#f0fdf4', color: '#166534', borderRadius: 2, p: 0.5, border: '1px solid #bbf7d0', height: '100%' }}>
                         <CardContent sx={{ pb: '16px !important' }}>
-                            <Box display="flex" alignItems="center" gap={1} mb={2}>
+                            <Box display="flex" alignItems="center" gap={1} mb={{ xs: 1, sm: 2 }}>
                                 <AccountBalanceWalletIcon fontSize="small" sx={{ opacity: 0.9 }} />
                                 <Typography variant="caption" sx={{ opacity: 0.9, fontWeight: 600 }}>年間利益</Typography>
                             </Box>
-                            <Typography variant="h5" sx={{ fontWeight: 'bold', fontFamily: 'monospace', letterSpacing: -1 }}>¥{(income - expense).toLocaleString()}</Typography>
+                            <Typography variant="h5" sx={{ fontWeight: 'bold', fontFamily: 'monospace', letterSpacing: -1, fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>¥{(income - expense).toLocaleString()}</Typography>
                         </CardContent>
                     </Card>
                 </Box>
@@ -290,23 +290,51 @@ export default function Home() {
             <Box px={1} mb={4}>
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>ビジネスアナリティクス</Typography>
 
-                <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-                    <Tabs value={mainTabIndex} onChange={(_, v) => setMainTabIndex(v)} variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile textColor="primary" indicatorColor="primary">
-                        <Tab label="1. 経営サマリー (Basic)" sx={{ fontWeight: 'bold' }} />
-                        <Tab label="2. 高度な分析 (Insights)" sx={{ fontWeight: 'bold' }} />
-                        <Tab label="3. 家計簿・プライベート" sx={{ fontWeight: 'bold', color: mainTabIndex === 2 ? '#0284c7' : 'text.secondary' }} />
-                    </Tabs>
+                <Box display="flex" flexWrap="wrap" gap={1} mb={2}>
+                    {[
+                        { label: "1. 経営サマリー (Basic)" },
+                        { label: "2. 高度な分析 (Insights)" },
+                        { label: "3. 家計簿・プライベート" }
+                    ].map((tab, idx) => (
+                        <Button
+                            key={idx}
+                            variant={mainTabIndex === idx ? "contained" : "outlined"}
+                            onClick={() => setMainTabIndex(idx)}
+                            sx={{ 
+                                borderRadius: 8, 
+                                textTransform: 'none', 
+                                fontWeight: 'bold',
+                                color: mainTabIndex === idx ? '#fff' : (idx === 2 ? '#0284c7' : 'text.secondary'),
+                                borderColor: mainTabIndex === idx ? 'transparent' : 'divider',
+                                boxShadow: mainTabIndex === idx ? '0 4px 6px -1px rgb(0 0 0 / 0.1)' : 'none',
+                                flexGrow: { xs: 1, sm: 0 },
+                                py: 1
+                            }}
+                            disableElevation
+                        >
+                            {tab.label}
+                        </Button>
+                    ))}
                 </Box>
 
                 {mainTabIndex === 0 && (
                     <>
-                        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-                            <Tabs value={tabIndex} onChange={(_, v) => setTabIndex(v)} variant="scrollable" scrollButtons="auto" sx={{ minHeight: 36, '& .MuiTab-root': { minHeight: 36, py: 0.5 } }}>
-                                <Tab label="経費内訳" />
-                                <Tab label="年間収支トレンド" />
-                                <Tab label="経営リスク分析" />
-                                <Tab label="税金・予算管理" />
-                            </Tabs>
+                        <Box display="flex" flexWrap="wrap" gap={1} mb={3}>
+                            {['経費内訳', '年間収支トレンド', '経営リスク分析', '税金・予算管理'].map((label, idx) => (
+                                <Chip
+                                    key={idx}
+                                    label={label}
+                                    onClick={() => setTabIndex(idx)}
+                                    color={tabIndex === idx ? "primary" : "default"}
+                                    variant={tabIndex === idx ? "filled" : "outlined"}
+                                    sx={{ 
+                                        fontWeight: tabIndex === idx ? 'bold' : 'normal', 
+                                        height: 36,
+                                        borderRadius: '8px',
+                                        fontSize: { xs: '0.8rem', sm: '0.875rem' }
+                                    }}
+                                />
+                            ))}
                         </Box>
 
                         <Suspense fallback={<Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>}>
@@ -467,42 +495,48 @@ export default function Home() {
 
                 {mainTabIndex === 2 && (
                     <Box pt={2}>
-                        <Box display="grid" gridTemplateColumns={{ xs: '1fr', sm: 'repeat(3, 1fr)' }} gap={2} mb={4}>
-                            <Card elevation={0} sx={{ bgcolor: '#f0fdf4', color: '#166534', borderRadius: 2, p: 0.5, border: '1px solid #bbf7d0' }}>
-                                <CardContent sx={{ pb: '16px !important' }}>
-                                    <Box display="flex" alignItems="center" gap={1} mb={2}>
-                                        <TrendingUpIcon fontSize="small" sx={{ opacity: 0.9 }} />
-                                        <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 600 }}>プライベート収入</Typography>
-                                    </Box>
-                                    <Typography variant="h4" sx={{ fontWeight: '800', fontFamily: 'monospace', letterSpacing: -1, fontSize: { xs: '1.75rem', sm: '2.125rem' } }}>
-                                        ¥{privateIncome.toLocaleString()}
-                                    </Typography>
-                                </CardContent>
-                            </Card>
+                        <Box display="grid" gridTemplateColumns={{ xs: '1fr 1fr', sm: 'repeat(3, 1fr)' }} gap={2} mb={4}>
+                            <Box sx={{ gridColumn: { xs: 'span 2', sm: 'span 1' } }}>
+                                <Card elevation={0} sx={{ bgcolor: '#f0fdf4', color: '#166534', borderRadius: 2, p: 0.5, border: '1px solid #bbf7d0', height: '100%' }}>
+                                    <CardContent sx={{ pb: '16px !important' }}>
+                                        <Box display="flex" alignItems="center" gap={1} mb={2}>
+                                            <TrendingUpIcon fontSize="small" sx={{ opacity: 0.9 }} />
+                                            <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 600 }}>プライベート収入</Typography>
+                                        </Box>
+                                        <Typography variant="h4" sx={{ fontWeight: '800', fontFamily: 'monospace', letterSpacing: -1, fontSize: { xs: '1.75rem', sm: '2.125rem' } }}>
+                                            ¥{privateIncome.toLocaleString()}
+                                        </Typography>
+                                    </CardContent>
+                                </Card>
+                            </Box>
 
-                            <Card elevation={0} sx={{ bgcolor: '#fffbeb', color: '#b45309', borderRadius: 2, p: 0.5, border: '1px solid #fde68a' }}>
-                                <CardContent sx={{ pb: '16px !important' }}>
-                                    <Box display="flex" alignItems="center" gap={1} mb={2}>
-                                        <TrendingDownIcon fontSize="small" sx={{ opacity: 0.9 }} />
-                                        <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 600 }}>プライベート支出</Typography>
-                                    </Box>
-                                    <Typography variant="h4" sx={{ fontWeight: '800', fontFamily: 'monospace', letterSpacing: -1, fontSize: { xs: '1.75rem', sm: '2.125rem' } }}>
-                                        ¥{privateExpense.toLocaleString()}
-                                    </Typography>
-                                </CardContent>
-                            </Card>
+                            <Box>
+                                <Card elevation={0} sx={{ bgcolor: '#fffbeb', color: '#b45309', borderRadius: 2, p: 0.5, border: '1px solid #fde68a', height: '100%' }}>
+                                    <CardContent sx={{ pb: '16px !important' }}>
+                                        <Box display="flex" alignItems="center" gap={1} mb={{ xs: 1, sm: 2 }}>
+                                            <TrendingDownIcon fontSize="small" sx={{ opacity: 0.9 }} />
+                                            <Typography variant="caption" sx={{ opacity: 0.9, fontWeight: 600 }}>プライベート支出</Typography>
+                                        </Box>
+                                        <Typography variant="h5" sx={{ fontWeight: 'bold', fontFamily: 'monospace', letterSpacing: -1, fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
+                                            ¥{privateExpense.toLocaleString()}
+                                        </Typography>
+                                    </CardContent>
+                                </Card>
+                            </Box>
 
-                            <Card elevation={0} sx={{ bgcolor: '#e0f2fe', color: '#0369a1', borderRadius: 2, p: 0.5, border: '1px solid #bae6fd' }}>
-                                <CardContent sx={{ pb: '16px !important' }}>
-                                    <Box display="flex" alignItems="center" gap={1} mb={2}>
-                                        <AccountBalanceWalletIcon fontSize="small" sx={{ opacity: 0.9 }} />
-                                        <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 600 }}>純差額（家計の利益）</Typography>
-                                    </Box>
-                                    <Typography variant="h4" sx={{ fontWeight: '800', fontFamily: 'monospace', letterSpacing: -1, fontSize: { xs: '1.75rem', sm: '2.125rem' } }}>
-                                        ¥{(privateIncome - privateExpense).toLocaleString()}
-                                    </Typography>
-                                </CardContent>
-                            </Card>
+                            <Box>
+                                <Card elevation={0} sx={{ bgcolor: '#e0f2fe', color: '#0369a1', borderRadius: 2, p: 0.5, border: '1px solid #bae6fd', height: '100%' }}>
+                                    <CardContent sx={{ pb: '16px !important' }}>
+                                        <Box display="flex" alignItems="center" gap={1} mb={{ xs: 1, sm: 2 }}>
+                                            <AccountBalanceWalletIcon fontSize="small" sx={{ opacity: 0.9 }} />
+                                            <Typography variant="caption" sx={{ opacity: 0.9, fontWeight: 600 }}>純差額（家計の利益）</Typography>
+                                        </Box>
+                                        <Typography variant="h5" sx={{ fontWeight: 'bold', fontFamily: 'monospace', letterSpacing: -1, fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
+                                            ¥{(privateIncome - privateExpense).toLocaleString()}
+                                        </Typography>
+                                    </CardContent>
+                                </Card>
+                            </Box>
                         </Box>
 
                         <Box mb={4}>
